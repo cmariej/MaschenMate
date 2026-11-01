@@ -50,27 +50,51 @@ npm run build --workspace=backend
 npm run build --workspace=frontend
 ```
 
-## Deployment: GitHub Pages und Homeserver
+## Deployment: GitHub Pages, Docker und MongoDB
 
-Für Anmeldung mit sicheren Cookies müssen Frontend und API unter derselben eigenen Domain liegen, zum Beispiel `app.example.com` und `api.example.com`. Eine GitHub-Pages-Adresse unter `github.io` und eine unabhängige Homeserver-Domain gelten im Browser als verschiedene Websites; dabei können Browser die erforderlichen Anmelde-Cookies blockieren. Richte deshalb eine eigene Domain für GitHub Pages und eine API-Subdomain ein.
+Das Frontend wird aus dem Branch `production` auf GitHub Pages veröffentlicht. Backend und MongoDB laufen gemeinsam per Docker Compose auf einem Homeserver. Verwendet werden `maschenmate.clara-jung.de` für das Frontend und `maschenmate-backend.clara-jung.de` für die API. Beide Hosts gehören zur selben Hauptdomain und sollten per HTTPS erreichbar sein, damit der Browser das Sitzungscookie bei API-Aufrufen zulässt. MongoDB braucht keine eigene Domain: Das Backend erreicht den MongoDB-Container intern über den Compose-Dienstnamen `mongodb`; der Datenbankport wird nicht nach außen veröffentlicht.
 
 ### GitHub Pages
 
-1. Weise in den Repository-Einstellungen unter **Pages** die eigene Frontend-Domain zu und hinterlege die dafür nötigen DNS-Einträge.
-2. Lege unter **Settings → Secrets and variables → Actions → Variables** die Repository-Variable `API_URL` mit dem API-Ursprung an, zum Beispiel `https://api.example.com` (ohne `/api`).
-3. Aktiviere als Pages-Buildquelle **GitHub Actions**. Der Workflow `.github/workflows/pages.yml` baut und veröffentlicht das Angular-Frontend nach jedem Push auf `main`.
+1. Erstelle und pushe den Branch `production` zu GitHub. Änderungen auf diesem Branch lösen die Veröffentlichung aus:
+
+   ```sh
+   git switch -c production
+   git push -u origin production
+   ```
+
+   Wenn der Branch bereits existiert, wechsle stattdessen mit `git switch production`.
+2. Weise in den Repository-Einstellungen unter **Pages** die Frontend-Domain `maschenmate.clara-jung.de` zu und hinterlege die von GitHub angezeigten DNS-Einträge bei deinem Domain-Anbieter. Warte, bis GitHub die Domain verifiziert und HTTPS aktiviert hat.
+3. Lege unter **Settings → Secrets and variables → Actions → Variables** die Repository-Variable `API_URL` mit dem Wert `https://maschenmate-backend.clara-jung.de` an (ohne `/api`).
+4. Aktiviere unter **Settings → Pages** als Buildquelle **GitHub Actions**. Der Workflow `.github/workflows/pages.yml` baut und veröffentlicht das Angular-Frontend nach jedem Push auf `production`. Den Status siehst du im Tab **Actions**.
 
 ### Homeserver
 
-1. Lege auf dem Homeserver `backend/.env.production` aus der Vorlage `backend/deploy.env.example` an. Setze `FRONTEND_URL` auf den exakten Frontend-Ursprung, zum Beispiel `https://app.example.com`, und ersetze `JWT_SECRET`, `COOKIE_SECRET` sowie `MONGO_ROOT_PASSWORD` durch zufällige Geheimnisse. Du kannst einen Wert lokal mit `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` erzeugen. Das Hex-Format ist auch für das Datenbankpasswort geeignet.
-2. Richte im DNS `api.example.com` auf deinen Homeserver und im Router HTTPS/443 auf deinen Reverse Proxy weiter. Konfiguriere dort ein gültiges HTTPS-Zertifikat und leite `api.example.com` intern an `http://127.0.0.1:3000` weiter. MongoDB wird nicht nach außen veröffentlicht.
-3. Klone das Repository auf den Homeserver und starte dort im Projektordner:
+1. Installiere Docker Engine und das Docker-Compose-Plugin auf dem Homeserver.
+2. Richte im DNS `maschenmate-backend.clara-jung.de` auf deinen Homeserver und im Router HTTPS/443 auf deinen Reverse Proxy weiter. Konfiguriere dort ein gültiges HTTPS-Zertifikat und leite `maschenmate-backend.clara-jung.de` intern an `http://127.0.0.1:3000` weiter. MongoDB läuft auf demselben Server als Docker-Compose-Dienst und wird nicht nach außen veröffentlicht.
+3. Klone das Repository auf den Homeserver und wechsle im Projektordner zum Branch `production`:
+
+   ```sh
+   git clone https://github.com/cmariej/MaschenMate.git
+   cd MaschenMate
+   git switch production
+   ```
+
+4. Lege dort `backend/.env.production` anhand von `backend/deploy.env.example` an. Setze `FRONTEND_URL=https://maschenmate.clara-jung.de` und ersetze `JWT_SECRET`, `COOKIE_SECRET` sowie `MONGO_ROOT_PASSWORD` durch zufällige Geheimnisse. Du kannst jeden Wert lokal mit `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` erzeugen. Das Hex-Format ist auch für das Datenbankpasswort geeignet. Die Datei enthält Geheimnisse und darf nicht ins Git-Repository hochgeladen werden.
+5. Starte im Projektordner Backend und MongoDB:
 
    ```sh
    docker compose --env-file backend/.env.production up -d --build
    ```
 
-   Das startet Backend und MongoDB. MongoDB speichert Konten, Projekte und Materiallisten im Volume `maschenmate-mongodb`, das Container-Neustarts und ein erneutes `docker compose up` überlebt. `docker compose down` erhält das Volume; **`docker compose down -v` löscht alle gespeicherten Daten**.
+   Das startet Backend und MongoDB. Prüfe den API-Status mit `curl https://maschenmate-backend.clara-jung.de/api/health`. MongoDB speichert Konten, Projekte und Materiallisten im Volume `maschenmate-mongodb`, das Container-Neustarts und ein erneutes `docker compose up` überlebt. `docker compose down` erhält das Volume; **`docker compose down -v` löscht alle gespeicherten Daten**.
+
+Bei weiteren Backend-Änderungen den Code auf dem Homeserver aktualisieren und die Container neu bauen:
+
+```sh
+git pull origin production
+docker compose --env-file backend/.env.production up -d --build
+```
 
 Für ein Backup regelmäßig einen MongoDB-Dump anfertigen und außerhalb des Homeservers sichern. Die JSON-Datei der lokalen Entwicklung wird nicht automatisch in die Online-MongoDB importiert.
 
