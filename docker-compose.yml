@@ -24,12 +24,21 @@ services:
       NODE_ENV: production
       PORT: 3000
       STORAGE_DRIVER: mongo
+      FRONTEND_URL: https://maschenmate.clara-jung.de
       MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/maschenmate?authSource=admin
-    ports:
-      - "127.0.0.1:3000:3000"
     depends_on:
       mongodb:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - backend
 
 volumes:
   maschenmate-mongodb:
