@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faFolderOpen, faHouse, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
@@ -45,6 +45,8 @@ interface ExpandedRow {
 })
 export class ProjectDashboard implements OnInit {
   protected readonly faPlus = faPlus;
+  protected readonly faHomeTab = faHouse;
+  protected readonly faProjectsTab = faFolderOpen;
 
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -659,17 +661,57 @@ export class ProjectDashboard implements OnInit {
     reader.readAsDataURL(file);
   }
 
+  protected onInstructionPdfSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.editorError = '';
+    if (file.type !== 'application/pdf') {
+      this.editorError = 'Bitte wähle eine PDF-Datei aus.';
+      input.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.editorError = 'Die PDF-Anleitung darf höchstens 5 MB groß sein.';
+      input.value = '';
+      return;
+    }
+
+    this.draft.instructionMode = 'pdf';
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string' || !reader.result.startsWith('data:application/pdf;base64,JVBERi0')) {
+        this.editorError = 'Die ausgewählte Datei ist keine gültige PDF-Datei.';
+      } else {
+        this.draft.instructionPdf = reader.result;
+        this.draft.instructionPdfName = file.name;
+        this.draft.instructionMode = 'pdf';
+      }
+      input.value = '';
+    };
+    reader.onerror = () => {
+      this.editorError = 'Die PDF-Datei konnte nicht gelesen werden.';
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
   protected saveProject(): void {
     this.editorError = '';
-    if (this.draft.sections.some((section) => section.entries.length === 0)) {
+    if (this.draft.instructionMode === 'pdf' && !this.draft.instructionPdf) {
+      this.editorError = 'Bitte lade eine PDF-Anleitung hoch.';
+      return;
+    }
+    if (this.draft.instructionMode === 'manual' && this.draft.sections.some((section) => section.entries.length === 0)) {
       this.editorError = 'Jeder Abschnitt benötigt mindestens eine Reihenanweisung.';
       return;
     }
-    if (this.draft.sections.some((section) => this.sectionRows(section).length !== this.lastRow(section))) {
+    if (this.draft.instructionMode === 'manual' && this.draft.sections.some((section) => this.sectionRows(section).length !== this.lastRow(section))) {
       this.editorError = 'Reihenbereiche müssen lückenlos und ohne Überschneidungen ab Reihe 1 eingetragen werden.';
       return;
     }
-    if (this.draft.sections.some((section) => this.lastRow(section) > 10_000)) {
+    if (this.draft.instructionMode === 'manual' && this.draft.sections.some((section) => this.lastRow(section) > 10_000)) {
       this.editorError = 'Ein Abschnitt darf höchstens 10.000 Reihen enthalten.';
       return;
     }
@@ -944,6 +986,9 @@ export class ProjectDashboard implements OnInit {
     return {
       ...normalized,
       category: legacy.category ?? 'other',
+      instructionMode: legacy.instructionMode ?? 'manual',
+      instructionPdf: legacy.instructionPdf ?? null,
+      instructionPdfName: legacy.instructionPdfName ?? null,
       yarns: legacy.yarns.map((yarn) => this.normalizeProjectYarn(yarn)),
       sections: legacy.sections.map((section) => ({
         ...section,
@@ -968,6 +1013,9 @@ export class ProjectDashboard implements OnInit {
       patternYarn: null,
       yarns: [],
       needles: [],
+      instructionMode: 'manual',
+      instructionPdf: null,
+      instructionPdfName: null,
       sections: [],
       progress: { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] },
     };

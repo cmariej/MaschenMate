@@ -87,6 +87,17 @@ const projectInputSchema = z.object({
     type: z.enum(['straight', 'circular', 'double-pointed', 'crochet-hook', 'other']),
     size: z.number().positive().max(100),
   })).max(30),
+  instructionMode: z.enum(['manual', 'pdf']).default('manual'),
+  instructionPdf: z.string()
+    .max(7_000_000)
+    .regex(/^data:application\/pdf;base64,[A-Za-z0-9+/]+={0,2}$/)
+    .refine((pdf) => {
+      const bytes = Buffer.from(pdf.slice(pdf.indexOf(',') + 1), 'base64');
+      return bytes.length <= 5 * 1024 * 1024 && bytes.subarray(0, 5).toString('ascii') === '%PDF-';
+    })
+    .nullable()
+    .default(null),
+  instructionPdfName: z.string().trim().min(1).max(255).nullable().default(null),
   sections: z.array(z.object({
     id: idSchema,
     name: z.string().trim().min(1).max(100),
@@ -215,7 +226,29 @@ async function recordActivity(
 router.get('/', async (_req, res, next) => {
   try {
     const userId = res.locals.authUser.id as string;
-    res.json({ projects: await projectStore.list(userId) });
+    const projects = await projectStore.list(userId);
+    res.json({ projects: projects.map((project) => ({ ...project, instructionPdf: null })) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:projectId/instruction-pdf', async (req, res, next) => {
+  try {
+    const userId = res.locals.authUser.id as string;
+    const project = await projectStore.find(userId, req.params.projectId);
+    if (!project?.instructionPdf) {
+      res.status(404).json({ message: 'PDF-Anleitung nicht gefunden.' });
+      return;
+    }
+
+    const pdf = Buffer.from(project.instructionPdf.slice(project.instructionPdf.indexOf(',') + 1), 'base64');
+    const filename = encodeURIComponent(project.instructionPdfName ?? 'Anleitung.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${filename}`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(pdf);
   } catch (error) {
     next(error);
   }
@@ -229,11 +262,20 @@ router.post('/', async (req, res, next) => {
   }
   try {
     const userId = res.locals.authUser.id as string;
-    const project = await projectStore.create(userId, parsed.data as ProjectInput);
+    if (parsed.data.instructionMode === 'pdf' && !parsed.data.instructionPdf) {
+      res.status(400).json({ message: 'Bitte lade die PDF-Anleitung hoch.' });
+      return;
+    }
+    const input = parsed.data as ProjectInput;
+    if (input.instructionMode === 'manual') {
+      input.instructionPdf = null;
+      input.instructionPdfName = null;
+    }
+    const project = await projectStore.create(userId, input);
     if (project.progress.startedAt) {
       await recordActivity(userId, project, 'started', `${project.id}:started`);
     }
-    res.status(201).json({ project });
+    res.status(201).json({ project: { ...project, instructionPdf: null } });
   } catch (error) {
     next(error);
   }
@@ -253,6 +295,17 @@ router.put('/:projectId', async (req, res, next) => {
       return;
     }
     const input = parsed.data as ProjectInput;
+    if (input.instructionMode === 'pdf') {
+      input.instructionPdf ??= previous.instructionPdf;
+      input.instructionPdfName ??= previous.instructionPdfName;
+      if (!input.instructionPdf) {
+        res.status(400).json({ message: 'Bitte lade die PDF-Anleitung hoch.' });
+        return;
+      }
+    } else {
+      input.instructionPdf = null;
+      input.instructionPdfName = null;
+    }
     input.progress.cancelledAt = previous.progress.cancelledAt ?? null;
     const project = await projectStore.update(userId, req.params.projectId, input);
     if (!project) {
@@ -276,7 +329,7 @@ router.put('/:projectId', async (req, res, next) => {
     if (!isProjectComplete(previous) && isProjectComplete(project)) {
       await recordActivity(userId, project, 'finished', completionEventKey(project, project.id, 'finished'));
     }
-    res.json({ project });
+    res.json({ project: { ...project, instructionPdf: null } });
   } catch (error) {
     next(error);
   }

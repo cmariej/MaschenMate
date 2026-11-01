@@ -104,6 +104,9 @@ export interface ProjectInput {
   patternYarn: PatternYarn | null;
   yarns: ProjectYarn[];
   needles: Needle[];
+  instructionMode: 'manual' | 'pdf';
+  instructionPdf: string | null;
+  instructionPdfName: string | null;
   sections: ProjectSection[];
   progress: ProjectProgress;
 }

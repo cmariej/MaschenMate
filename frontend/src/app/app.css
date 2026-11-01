@@ -555,6 +555,15 @@ form input::placeholder {
     0 3px 10px rgb(92 66 58 / 5%);
 }
 
+.account-panel.project-app {
+  overflow: hidden;
+  width: min(50vw, 1600px);
+}
+
+.account-panel.legal-app {
+  width: min(50vw, 1280px);
+}
+
 .account-panel > * {
   z-index: 1;
 }
@@ -855,6 +864,11 @@ form input::placeholder {
     min-height: min(700px, calc(100svh - 32px));
     padding: 25px 25px 17px;
     border-radius: 26px;
+  }
+
+  .account-panel.project-app,
+  .account-panel.legal-app {
+    width: 100%;
   }
 
   .account-panel > .brand {

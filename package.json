@@ -7,7 +7,7 @@
     "frontend"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=backend",
+    "dev": "concurrently -k -n API,WEB \"npm run dev --workspace=backend\" \"npm start --workspace=frontend\"",
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend"
   },
   "devDependencies": {

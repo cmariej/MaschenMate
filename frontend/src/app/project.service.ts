@@ -103,6 +103,9 @@ export interface ProjectInput {
   patternYarn: PatternYarn | null;
   yarns: ProjectYarn[];
   needles: Needle[];
+  instructionMode: 'manual' | 'pdf';
+  instructionPdf: string | null;
+  instructionPdfName: string | null;
   sections: ProjectSection[];
   progress: ProjectProgress;
 }
@@ -140,6 +143,10 @@ export class ProjectService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${window.MASCHENMATE_CONFIG?.apiUrl?.replace(/\/+$/, '') ?? ''}/api/projects`;
   private readonly feedUrl = `${window.MASCHENMATE_CONFIG?.apiUrl?.replace(/\/+$/, '') ?? ''}/api/feed`;
+
+  instructionPdfUrl(projectId: string): string {
+    return `${this.apiUrl}/${encodeURIComponent(projectId)}/instruction-pdf`;
+  }
 
   list(): Observable<{ projects: Project[] }> {
     return this.http.get<{ projects: Project[] }>(this.apiUrl, { withCredentials: true }).pipe(

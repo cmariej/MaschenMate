@@ -17,7 +17,7 @@ const app = express();
 app.set('trust proxy', config.isProduction ? 1 : false);
 app.use(helmet());
 app.use(cors({ origin: config.FRONTEND_URL, credentials: true }));
-app.use(express.json({ limit: '9mb' }));
+app.use(express.json({ limit: '16mb' }));
 app.use(cookieParser(config.COOKIE_SECRET));
 
 const authLimiter = rateLimit({

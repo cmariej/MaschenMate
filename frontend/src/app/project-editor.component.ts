@@ -107,6 +107,17 @@ import {
 
         <section class="form-section">
           <h3>Anleitung</h3>
+          <div class="instruction-mode-choice" role="radiogroup" aria-label="Anleitungsformat">
+            <label class="library-option">
+              <input type="radio" name="instructionMode" value="manual" [(ngModel)]="draft.instructionMode" />
+              <span>Anleitung manuell eingeben</span>
+            </label>
+            <label class="library-option">
+              <input type="radio" name="instructionMode" value="pdf" [(ngModel)]="draft.instructionMode" />
+              <span>PDF-Anleitung hochladen</span>
+            </label>
+          </div>
+          @if (draft.instructionMode === 'manual') {
           <p class="form-hint">Jeder Eintrag steht für eine Reihe oder einen zusammenhängenden Reihenbereich mit gleicher Maschenzahl und Anweisung. Teile den Abschnitt auf, wenn sich Maschenzahl, Text oder Garn ändert. Eine Wiederholung bildet einen wechselnden Reihenzyklus wie rechts/links ab.</p>
           @for (section of draft.sections; track section.id; let sectionIndex = $index) {
             <details class="section-editor">
@@ -195,6 +206,23 @@ import {
             <p class="form-hint">Füge Abschnitte hinzu, zum Beispiel „Bündchen“, „Vorderteil“ oder „Ärmel“.</p>
           }
           <button class="secondary-button inline-icon-action add-section-button" type="button" (click)="addSection.emit()"><app-fa-icon [icon]="faPlus" /> Neuer Abschnitt</button>
+          } @else {
+            <div class="instruction-pdf-upload">
+              @if (draft.instructionPdfName) {
+                <p class="form-hint">Ausgewählte PDF: <strong>{{ draft.instructionPdfName }}</strong></p>
+              }
+              <label class="file-picker">PDF auswählen
+                <input type="file" accept="application/pdf,.pdf" (change)="instructionPdfSelected.emit($event)" />
+              </label>
+              <small>PDF-Datei, maximal 5 MB. Die PDF wird beim Projekt gespeichert.</small>
+              @if (draft.instructionPdfName) {
+                <button class="text-button" type="button" (click)="removeInstructionPdf()">PDF entfernen</button>
+              }
+              @if (!draft.instructionPdf) {
+                <p class="form-hint">Lade eine PDF-Datei hoch, um die manuelle Eingabe zu ersetzen.</p>
+              }
+            </div>
+          }
         </section>
 
         @if (editorError) {
@@ -225,6 +253,7 @@ export class ProjectEditorComponent {
   @Output() save = new EventEmitter<void>();
   @Output() openMaterials = new EventEmitter<void>();
   @Output() imageSelected = new EventEmitter<Event>();
+  @Output() instructionPdfSelected = new EventEmitter<Event>();
   @Output() yarnSelection = new EventEmitter<{ yarn: Yarn; selected: boolean }>();
   @Output() needleSelection = new EventEmitter<{ needle: Needle; selected: boolean }>();
   @Output() removeSection = new EventEmitter<number>();
@@ -244,6 +273,12 @@ export class ProjectEditorComponent {
 
   protected compositionLabel(yarn: Yarn): string {
     return yarn.composition.map((item) => `${item.material} ${item.percentage}%`).join(', ');
+  }
+
+  protected removeInstructionPdf(): void {
+    this.draft.instructionPdf = null;
+    this.draft.instructionPdfName = null;
+    this.draft.instructionMode = 'manual';
   }
 
 }

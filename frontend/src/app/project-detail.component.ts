@@ -1,8 +1,9 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { faArrowLeft, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
-import { Project, Yarn } from './project.service';
+import { Project, ProjectService, Yarn } from './project.service';
 
 export interface ProjectDetailRow {
   number: number;
@@ -36,9 +37,13 @@ interface YarnUsage {
       @if (project.image) { <img class="detail-project-image" [src]="project.image" [alt]="'Bild für ' + project.name" /> }
       <div class="detail-content">
         <div class="detail-block">
-          <h4>Fortschritt · {{ progress }}%</h4>
+          <h4>{{ project.instructionMode === 'pdf' ? 'Fortschritt' : 'Fortschritt ' + progress + '%' }}</h4>
+          @if (project.instructionMode !== 'pdf') {
           <div class="progress-track"><span [style.width.%]="progress"></span></div>
-          @if (project.progress.cancelledAt) {
+          }
+          @if (project.instructionMode === 'pdf') {
+            <p class="project-status">Die Reihenverfolgung ist bei PDF-Anleitungen nicht verfügbar.</p>
+          } @else if (project.progress.cancelledAt) {
             <p class="project-status cancelled-status">Projekt abgebrochen · {{ formatDate(project.progress.cancelledAt) }}</p>
           } @else if (completed) {
             <p class="project-status finished-status">Projekt fertiggestellt</p>
@@ -85,6 +90,7 @@ interface YarnUsage {
             </div>
           </section>
         }
+        @if (project.instructionMode !== 'pdf') {
         <details class="instructions-accordion">
           <summary class="instructions-heading">
             <span>Anleitung</span>
@@ -143,12 +149,29 @@ interface YarnUsage {
           }
           </div>
         </details>
+        } @else if (instructionPdfUrl && instructionPdfHref) {
+          <section class="detail-block pdf-instruction-viewer" aria-labelledby="pdf-instruction-title">
+            <div class="pdf-instruction-heading">
+              <h4 id="pdf-instruction-title">PDF-Anleitung</h4>
+              <a class="small-button" [href]="instructionPdfHref" target="_blank" rel="noopener">In neuem Tab öffnen</a>
+            </div>
+            <iframe [src]="instructionPdfUrl" [title]="'PDF-Anleitung für ' + project.name"></iframe>
+          </section>
+        }
         @if (project.progress.changelog.length) {
-          <div class="detail-block"><h4>Verlauf</h4>
-            @for (entry of project.progress.changelog.slice().reverse().slice(0, 8); track entry.id) {
-              <p>{{ entry.type === 'started' ? 'Projekt gestartet' : entry.type === 'row_completed' ? 'Reihe ' + entry.rowNumber + ' abgeschlossen' : entry.type === 'row_reopened' ? 'Reihe ' + entry.rowNumber + ' zurückgesetzt' : 'Abschnitt gewechselt' }} · {{ formatDate(entry.timestamp) }}</p>
-            }
-          </div>
+          <details class="instructions-accordion history-accordion">
+            <summary class="instructions-heading">
+              <span>Verlauf</span>
+              <small>{{ project.progress.changelog.length }} {{ project.progress.changelog.length === 1 ? 'Eintrag' : 'Einträge' }}</small>
+            </summary>
+            <div class="instructions-content">
+              <div class="detail-block">
+                @for (entry of project.progress.changelog.slice().reverse().slice(0, 8); track entry.id) {
+                  <p>{{ entry.type === 'started' ? 'Projekt gestartet' : entry.type === 'row_completed' ? 'Reihe ' + entry.rowNumber + ' abgeschlossen' : entry.type === 'row_reopened' ? 'Reihe ' + entry.rowNumber + ' zurückgesetzt' : 'Abschnitt gewechselt' }} · {{ formatDate(entry.timestamp) }}</p>
+                }
+              </div>
+            </div>
+          </details>
         }
         @if (deletePending) {
           <div class="delete-confirm"><span>Projekt wirklich löschen?</span><button type="button" (click)="remove.emit()">Ja, löschen</button><button type="button" (click)="deletePending = false">Abbrechen</button></div>
@@ -159,9 +182,14 @@ interface YarnUsage {
     </section>
   `,
 })
-export class ProjectDetailComponent {
+export class ProjectDetailComponent implements OnChanges {
   protected readonly faArrowLeft = faArrowLeft;
   protected readonly faPen = faPen;
+  protected instructionPdfUrl: SafeResourceUrl | null = null;
+  protected instructionPdfHref: string | null = null;
+
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly projectService = inject(ProjectService);
 
   @Input({ required: true }) project!: Project;
   @Input() category = '';
@@ -182,6 +210,18 @@ export class ProjectDetailComponent {
   @Output() remove = new EventEmitter<void>();
   protected deletePending = false;
   protected cancelPending = false;
+
+  ngOnChanges(): void {
+    if (this.project?.instructionMode !== 'pdf') {
+      this.instructionPdfHref = null;
+      this.instructionPdfUrl = null;
+      return;
+    }
+
+    const url = this.projectService.instructionPdfUrl(this.project.id);
+    this.instructionPdfHref = url;
+    this.instructionPdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
 
   protected yarnNameFor(yarnId?: string): string {
     return this.project.yarns.find((yarn) => yarn.id === (yarnId ?? this.project.yarns[0]?.id))?.name ?? 'Kein Garn ausgewählt';

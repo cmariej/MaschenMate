@@ -17,6 +17,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+main.shell:has(.bottom-tabs) {
+  padding-bottom: calc(clamp(12px, 2.5vw, 36px) + 100px + env(safe-area-inset-bottom));
+}
+
 button,
 input {
   font: inherit;
@@ -53,8 +57,6 @@ input {
 
 .account-panel.project-app {
   align-self: start;
-  overflow: visible;
-  width: min(100%, 1440px);
   min-height: calc(100svh - 2 * clamp(12px, 2.5vw, 36px));
   padding: clamp(20px, 3vw, 44px) clamp(18px, 4vw, 58px) 28px;
 }
@@ -68,8 +70,6 @@ input {
 
 main.shell > .account-panel.legal-app {
   align-self: start;
-  overflow: visible;
-  width: min(100%, 1120px);
   min-height: calc(100svh - 2 * clamp(12px, 2.5vw, 36px));
   padding: clamp(20px, 3vw, 44px) clamp(18px, 4vw, 58px) 28px;
 }
@@ -268,17 +268,19 @@ main.shell > .account-panel.legal-app {
   width: min(100%, 1160px);
   grid-template-columns: repeat(4, 1fr);
   margin: 0 auto;
-  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
-  border: 1px solid #eee1e7;
+  padding: 7px 12px max(8px, env(safe-area-inset-bottom));
+  border: 1px solid rgb(238 225 231 / 20%);
   border-bottom: 0;
   border-radius: 17px 17px 0 0;
-  background: rgb(255 253 250 / 97%);
-  box-shadow: 0 -8px 28px rgb(52 43 37 / 8%);
+  background: rgb(255 253 250 / 4%);
+  box-shadow: 0 -8px 28px rgb(52 43 37 / 9%);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
+  backdrop-filter: blur(22px) saturate(165%);
 }
 
 .bottom-tabs button {
   display: flex;
-  min-height: 54px;
+  min-height: 56px;
   align-items: center;
   flex-direction: column;
   justify-content: center;
@@ -288,15 +290,29 @@ main.shell > .account-panel.legal-app {
   background: transparent;
   color: #958790;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;
+  font-weight: 550;
 }
 
-.bottom-tabs button span {
-  font-size: 18px;
+.bottom-tabs button app-fa-icon {
+  width: 23px;
+  height: 23px;
+  margin-bottom: 1px;
+}
+
+.bottom-tabs button .craft-tab-icon {
+  width: 23px;
+  height: 23px;
+  margin-bottom: 1px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
 }
 
 .bottom-tabs button.active {
-  background: #f5ebf1;
+  background: rgb(245 235 241 / 34%);
   color: #765674;
   font-weight: 700;
 }
@@ -434,6 +450,10 @@ button.icon-action-button:focus-visible {
 }
 
 @media (max-width: 650px) {
+  main.shell:has(.bottom-tabs) {
+    padding-bottom: calc(16px + 100px + env(safe-area-inset-bottom));
+  }
+
   .authenticated-header {
     margin-bottom: 14px;
   }
@@ -441,10 +461,6 @@ button.icon-action-button:focus-visible {
   .account-panel.project-app {
     min-height: calc(100svh - 32px);
     padding: 20px 22px 18px;
-  }
-
-  .account-panel.project-app {
-    width: 100%;
   }
 
   .account-content .project-dashboard input:not([type='checkbox']),

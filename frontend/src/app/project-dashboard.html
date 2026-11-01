@@ -237,10 +237,24 @@
 
 @if (view !== 'project-edit' && view !== 'yarn-edit' && view !== 'needle-edit') {
 <nav class="bottom-tabs" aria-label="Hauptnavigation">
-  <button type="button" [class.active]="page === 'home'" (click)="showPage('home')"><span aria-hidden="true">⌂</span>Dashboard</button>
-  <button type="button" [class.active]="page === 'projects'" (click)="showPage('projects')"><span aria-hidden="true">▤</span>Projekte</button>
-  <button type="button" [class.active]="page === 'yarns'" (click)="showPage('yarns')"><span aria-hidden="true">🧶</span>Garne</button>
-  <button type="button" [class.active]="page === 'needles'" (click)="showPage('needles')"><span aria-hidden="true">🪡</span>Nadeln</button>
+  <button type="button" [class.active]="page === 'home'" (click)="showPage('home')"><app-fa-icon [icon]="faHomeTab" /><span>Dashboard</span></button>
+  <button type="button" [class.active]="page === 'projects'" (click)="showPage('projects')"><app-fa-icon [icon]="faProjectsTab" /><span>Projekte</span></button>
+  <button type="button" [class.active]="page === 'yarns'" (click)="showPage('yarns')">
+    <svg class="craft-tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z" />
+      <path d="M6.1 6.7c4.8 1.8 8.4 5.8 9.8 11.1M4.1 11c4.2.4 9-2.1 12.4-5.2M5.5 17.1c3-3.7 7.8-6 13.6-6M9.1 20.5c1.2-4.3 4.4-8.3 8.8-10.5" />
+      <path d="M17.2 17.6c1.5.2 2.4 1 3.1 2.5" />
+    </svg>
+    <span>Garne</span>
+  </button>
+  <button type="button" [class.active]="page === 'needles'" (click)="showPage('needles')">
+    <svg class="craft-tab-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m3.7 20.3 1.6-3.1L17.8 4.7l1.5 1.5L7 18.5l-3.3 1.8Z" />
+      <path d="m3.6 3.7 3.1 1.6 12.5 12.5-1.5 1.5L5.2 6.8 3.6 3.7Z" />
+      <path d="m16.5 4.6 2.4-2.4 2.9 2.9-2.4 2.4M16.9 19.4l2.5 2.5 2.9-2.9-2.5-2.5" />
+    </svg>
+    <span>Nadeln</span>
+  </button>
 </nav>
 }
 
@@ -287,6 +301,7 @@
     (save)="saveProject()"
     (openMaterials)="openMaterialsFromEditor()"
     (imageSelected)="onProjectImageSelected($event)"
+    (instructionPdfSelected)="onInstructionPdfSelected($event)"
     (yarnSelection)="toggleProjectYarn($event.yarn, $event.selected)"
     (needleSelection)="toggleProjectNeedle($event.needle, $event.selected)"
     (removeSection)="removeSection($event)"

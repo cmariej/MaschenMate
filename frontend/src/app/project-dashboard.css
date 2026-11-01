@@ -590,6 +590,33 @@
   accent-color: #927096;
 }
 
+.instruction-mode-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.instruction-mode-choice .library-option {
+  margin: 0;
+}
+
+.instruction-pdf-upload {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #efe5ea;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 55%);
+}
+
+.instruction-pdf-upload small {
+  color: #897d83;
+  font-size: 10px;
+}
+
 .color-preview {
   display: inline-block;
   width: 18px;
@@ -851,6 +878,10 @@
 }
 
 @media (max-width: 700px) {
+  .instruction-mode-choice {
+    grid-template-columns: 1fr;
+  }
+
   .dashboard-heading {
     align-items: flex-start;
   }

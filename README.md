@@ -1,5 +1,12 @@
 # MaschenMate
 
+ssh lukara@192.168.188.65
+cd /srv/MaschenMate/MaschenMate/
+docker compose --env-file backend/.env.production down
+git pull
+docker compose --env-file backend/.env.production up -d --build
+
+
 MaschenMate ist ein Angular-Frontend mit Express-/TypeScript-API. Nutzer können Häkel- und Strickprojekte mit Bild, Maschenprobe, abschnittsweiser Anleitung, Wiederholungen, Garnen und Nadeln anlegen und ihren Reihenfortschritt verfolgen. Registrierung und Anmeldung funktionieren mit Name, eindeutigem Benutzernamen und Passwort; bei der Registrierung kann ein Profilbild hinzugefügt werden. Über das Avatar-Menü können Benutzer nach Benutzernamen gesucht, Freundschaftsanfragen gesendet, angenommen oder abgelehnt und Freunde entfernt werden. Die API stellt Sitzungen als signierte JWTs in `HttpOnly`-Cookies bereit.
 
 Die öffentliche Route `/datenschutz-impressum` enthält die Datenschutz- und Betreiberinformationen. Vor einer Veröffentlichung müssen insbesondere tatsächlicher Hosting-Anbieter, Serverstandort, eingesetzte Auftragsverarbeiter und Speicherfristen der Serverprotokolle anhand der Deployment-Konfiguration verifiziert und ergänzt werden. Der Text ist keine Rechtsberatung.

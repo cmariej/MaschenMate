@@ -153,6 +153,32 @@
   border-top: 1px solid #f0e9ed;
 }
 
+.pdf-instruction-viewer {
+  overflow: hidden;
+}
+
+.pdf-instruction-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pdf-instruction-heading h4 {
+  margin: 0;
+}
+
+.pdf-instruction-viewer iframe {
+  display: block;
+  width: 100%;
+  height: min(78vh, 900px);
+  min-height: 480px;
+  border: 1px solid #e9dce4;
+  border-radius: 8px;
+  background: #fff;
+}
+
 .detail-block {
   margin: 18px 0;
   padding: 14px;
@@ -440,6 +466,7 @@
 }
 
 .delete-confirm button:first-of-type {
+  margin-left: auto;
   border-color: #a54357;
   color: #a54357;
 }
