@@ -1,3 +1,4 @@
+```yaml
 name: Deploy Angular frontend to GitHub Pages
 
 on:
@@ -17,6 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -30,8 +32,11 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Update npm
+        run: npm install --global npm@latest
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
 
       - name: Set API URL
         env:
@@ -39,11 +44,29 @@ jobs:
         run: |
           node --input-type=module -e "
             import { writeFileSync } from 'node:fs';
+
             const value = process.env.API_URL;
-            if (!value) throw new Error('Set the GitHub Actions repository variable API_URL to your HTTPS API origin.');
+
+            if (!value) {
+              throw new Error(
+                'Set the GitHub Actions repository variable API_URL to your HTTPS API origin.'
+              );
+            }
+
             const url = new URL(value);
-            if (url.protocol !== 'https:') throw new Error('API_URL must use HTTPS.');
-            writeFileSync('frontend/public/app-config.js', 'window.MASCHENMATE_CONFIG = { apiUrl: ' + JSON.stringify(url.origin) + ' };\\n');
+
+            if (url.protocol !== 'https:') {
+              throw new Error('API_URL must use HTTPS.');
+            }
+
+            writeFileSync(
+              'frontend/public/app-config.js',
+              'window.MASCHENMATE_CONFIG = { apiUrl: ' +
+                JSON.stringify(url.origin) +
+                ' };\\n'
+            );
+
+            console.log('API configuration created successfully.');
           "
 
       - name: Build Angular frontend
@@ -58,9 +81,12 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     runs-on: ubuntu-latest
     needs: build
+
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+```
