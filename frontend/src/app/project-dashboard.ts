@@ -699,22 +699,17 @@ export class ProjectDashboard implements OnInit {
 
   protected saveProject(): void {
     this.editorError = '';
-    if (this.draft.instructionMode === 'pdf' && !this.draft.instructionPdf) {
-      this.editorError = 'Bitte lade eine PDF-Anleitung hoch.';
+    this.draft.progress ??= { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] };
+    this.draft.progress.completedRows ??= {};
+    this.draft.progress.changelog ??= [];
+    const validationError = this.validateProjectDraft();
+    if (validationError) {
+      this.editorError = validationError;
       return;
     }
-    if (this.draft.instructionMode === 'manual' && this.draft.sections.some((section) => section.entries.length === 0)) {
-      this.editorError = 'Jeder Abschnitt benötigt mindestens eine Reihenanweisung.';
-      return;
-    }
-    if (this.draft.instructionMode === 'manual' && this.draft.sections.some((section) => this.sectionRows(section).length !== this.lastRow(section))) {
-      this.editorError = 'Reihenbereiche müssen lückenlos und ohne Überschneidungen ab Reihe 1 eingetragen werden.';
-      return;
-    }
-    if (this.draft.instructionMode === 'manual' && this.draft.sections.some((section) => this.lastRow(section) > 10_000)) {
-      this.editorError = 'Ein Abschnitt darf höchstens 10.000 Reihen enthalten.';
-      return;
-    }
+
+    // Fill optional legacy fields so requests always have the complete shape
+    // expected by the API, even when editing an older project.
     this.saving = true;
     const request = this.editingId
       ? this.projectService.update(this.editingId, this.draft)
@@ -735,6 +730,75 @@ export class ProjectDashboard implements OnInit {
         this.changeDetector.markForCheck();
       },
     });
+  }
+
+  private validateProjectDraft(): string | null {
+    const project = this.draft;
+    if (!project.name?.trim() || project.name.trim().length > 100) return 'Bitte gib einen Projektnamen mit höchstens 100 Zeichen ein.';
+    if (!['knitting', 'crochet'].includes(project.type)) return 'Bitte wähle eine gültige Projektart aus.';
+    if (!this.categories.some((category) => category.value === project.category)) return 'Bitte wähle eine gültige Kategorie aus.';
+    if (project.yarns.length > 30 || project.needles.length > 30 || project.sections.length > 50) return 'Das Projekt enthält mehr Materialien oder Abschnitte als erlaubt.';
+    if (project.image && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(project.image)) return 'Das Projektbild hat ein ungültiges Format. Bitte wähle es erneut aus.';
+
+    for (const yarn of project.yarns) {
+      if (!yarn.id || !yarn.name.trim() || yarn.name.trim().length > 100) return 'Jedes ausgewählte Garn braucht einen Namen mit höchstens 100 Zeichen.';
+      if ((yarn.brand ?? '').length > 100 || (yarn.color ?? '').length > 100 || (yarn.colorCode ?? '').length > 40) return `Die Angaben für „${yarn.name}“ sind zu lang.`;
+      if (!this.isPositiveFinite(yarn.needleSize, 100) || !this.isPositiveFinite(yarn.length, 1_000_000) || !this.isPositiveFinite(yarn.weight, 1_000_000)) return `Bitte prüfe Nadelstärke, Lauflänge und Gewicht für „${yarn.name}“.`;
+      if (!this.isPositiveFinite(yarn.gauge?.stitches, 1000) || !this.isPositiveFinite(yarn.gauge?.rows, 1000)) return `Bitte gib für „${yarn.name}“ eine gültige Maschenprobe ein.`;
+      if (yarn.composition.length > 20 || yarn.composition.some((item) => !item.material.trim() || item.material.trim().length > 60 || !this.isPositiveFinite(item.percentage, 100))) return `Bitte prüfe die Materialzusammensetzung für „${yarn.name}“.`;
+      if (yarn.composition.length && Math.round(yarn.composition.reduce((sum, item) => sum + item.percentage, 0) * 100) / 100 !== 100) return `Die Materialanteile für „${yarn.name}“ müssen zusammen 100 % ergeben.`;
+    }
+    if (new Set(project.yarns.map((yarn) => yarn.id)).size !== project.yarns.length) return 'Ein Garn ist mehrfach ausgewählt. Bitte aktualisiere die Auswahl.';
+
+    for (const needle of project.needles) {
+      if (!needle.id || !['straight', 'circular', 'double-pointed', 'crochet-hook', 'other'].includes(needle.type) || !this.isPositiveFinite(needle.size, 100)) return 'Bitte prüfe die ausgewählten Nadeln.';
+    }
+    if (new Set(project.needles.map((needle) => needle.id)).size !== project.needles.length) return 'Eine Nadel ist mehrfach ausgewählt. Bitte aktualisiere die Auswahl.';
+
+    if (project.patternYarn && !this.isPositiveFinite(project.patternYarn.amount, 1_000_000)) return 'Bitte gib eine gültige Garnmenge für die Maschenprobe ein.';
+    if (project.gauge && (!this.isPositiveFinite(project.gauge.pattern.stitches, 1000) || !this.isPositiveFinite(project.gauge.pattern.rows, 1000) || !this.isPositiveFinite(project.gauge.personal.stitches, 1000) || !this.isPositiveFinite(project.gauge.personal.rows, 1000))) return 'Bitte prüfe die Maschenprobe.';
+
+    if (project.instructionMode === 'pdf') {
+      if ((!project.instructionPdf && !this.editingId) || (project.instructionPdf && !project.instructionPdf.startsWith('data:application/pdf;base64,JVBERi0'))) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
+      if (!project.instructionPdfName?.trim() || project.instructionPdfName.length > 255) return 'Der Dateiname der PDF-Anleitung ist ungültig.';
+    } else {
+      if (project.sections.length === 0) return 'Bitte füge mindestens einen Abschnitt mit einer Anleitung hinzu.';
+      const sectionIds = new Set<string>();
+      const needleIds = new Set(project.needles.map((needle) => needle.id));
+      const yarnIds = new Set(project.yarns.map((yarn) => yarn.id));
+      for (const section of project.sections) {
+        if (!section.id || sectionIds.has(section.id)) return 'Jeder Anleitungsabschnitt braucht eine eindeutige Kennung.';
+        sectionIds.add(section.id);
+        if (!section.name.trim() || section.name.trim().length > 100) return 'Bitte gib jedem Abschnitt einen Namen mit höchstens 100 Zeichen.';
+        if (section.needleId && !needleIds.has(section.needleId)) return `Die ausgewählte Nadel im Abschnitt „${section.name}“ ist nicht mehr vorhanden.`;
+        if (section.entries.length === 0) return `Bitte füge im Abschnitt „${section.name}“ mindestens eine Reihenanweisung hinzu.`;
+        if (section.entries.length > 300) return `Der Abschnitt „${section.name}“ enthält zu viele Anweisungen.`;
+        if (this.sectionRows(section).length !== this.lastRow(section)) return `Die Reihen im Abschnitt „${section.name}“ müssen lückenlos und ohne Überschneidungen ab Reihe 1 eingetragen sein.`;
+        if (this.lastRow(section) > 10_000) return `Der Abschnitt „${section.name}“ darf höchstens 10.000 Reihen enthalten.`;
+        for (const entry of section.entries) {
+          if (!entry.id || !Number.isInteger(entry.fromRow) || !Number.isInteger(entry.toRow) || entry.fromRow < 1 || entry.toRow < entry.fromRow || entry.toRow > 100_000) return `Bitte prüfe die Reihenangaben im Abschnitt „${section.name}“.`;
+          if (entry.yarnId && !yarnIds.has(entry.yarnId)) return `Das ausgewählte Garn im Abschnitt „${section.name}“ ist nicht mehr vorhanden.`;
+          if (entry.type === 'range') {
+            if (!entry.instructions.trim() || entry.instructions.trim().length > 500 || !Number.isInteger(entry.stitchesPerRow) || entry.stitchesPerRow < 1 || entry.stitchesPerRow > 100_000) return `Bitte ergänze Anweisung und Maschenzahl im Abschnitt „${section.name}“.`;
+          } else {
+            if (entry.repeatRows.length === 0 || entry.repeatRows.length > 100) return `Die Reihenwiederholung im Abschnitt „${section.name}“ braucht 1 bis 100 Musterreihen.`;
+            for (const row of entry.repeatRows) {
+              if (!row.instructions.trim() || row.instructions.trim().length > 500 || !Number.isInteger(row.stitchesPerRow) || row.stitchesPerRow < 1 || row.stitchesPerRow > 100_000) return `Bitte ergänze alle Musterreihen im Abschnitt „${section.name}“ vollständig.`;
+              if (row.yarnId && !yarnIds.has(row.yarnId)) return `Das ausgewählte Garn im Abschnitt „${section.name}“ ist nicht mehr vorhanden.`;
+            }
+          }
+        }
+      }
+    }
+
+    if (project.progress.activeSectionId && !project.sections.some((section) => section.id === project.progress.activeSectionId)) return 'Der aktive Anleitungsabschnitt ist nicht mehr vorhanden.';
+    if (Object.values(project.progress.completedRows).some((rows) => !Number.isInteger(rows) || rows < 0 || rows > 100_000)) return 'Der gespeicherte Reihenfortschritt ist ungültig.';
+    if (project.progress.changelog.length > 500) return 'Das Projekt enthält zu viele Fortschrittseinträge. Bitte lade die Seite neu.';
+    return null;
+  }
+
+  private isPositiveFinite(value: number | undefined, maximum: number): boolean {
+    return typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= maximum;
   }
 
   protected startProject(project: Project): void {

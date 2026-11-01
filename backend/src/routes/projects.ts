@@ -257,7 +257,8 @@ router.get('/:projectId/instruction-pdf', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   const parsed = projectInputSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ message: parsed.error.issues[0]?.message ?? 'Ungültige Projektdaten.' });
+    const issue = parsed.error.issues[0];
+    res.status(400).json({ message: issue?.message ?? 'Ungültige Projektdaten.', field: issue?.path.join('.') ?? null });
     return;
   }
   try {
@@ -282,11 +283,6 @@ router.post('/', async (req, res, next) => {
 });
 
 router.put('/:projectId', async (req, res, next) => {
-  const parsed = projectInputSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ message: parsed.error.issues[0]?.message ?? 'Ungültige Projektdaten.' });
-    return;
-  }
   try {
     const userId = res.locals.authUser.id as string;
     const previous = await projectStore.find(userId, req.params.projectId);
@@ -294,6 +290,30 @@ router.put('/:projectId', async (req, res, next) => {
       res.status(404).json({ message: 'Projekt nicht gefunden.' });
       return;
     }
+
+    // Keep stored progress when older clients omit progress fields.
+    const submittedProgress = req.body?.progress;
+    const body = {
+      ...req.body,
+      progress: {
+        ...previous.progress,
+        ...(submittedProgress && typeof submittedProgress === 'object' ? submittedProgress : {}),
+        startedAt: submittedProgress?.startedAt !== undefined ? submittedProgress.startedAt : previous.progress.startedAt,
+        cancelledAt: submittedProgress?.cancelledAt ?? previous.progress.cancelledAt ?? null,
+        activeSectionId: submittedProgress?.activeSectionId !== undefined
+          ? submittedProgress.activeSectionId
+          : previous.progress.activeSectionId,
+        completedRows: submittedProgress?.completedRows ?? previous.progress.completedRows ?? {},
+        changelog: submittedProgress?.changelog ?? previous.progress.changelog ?? [],
+      },
+    };
+    const parsed = projectInputSchema.safeParse(body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      res.status(400).json({ message: issue?.message ?? 'Ungültige Projektdaten.', field: issue?.path.join('.') ?? null });
+      return;
+    }
+
     const input = parsed.data as ProjectInput;
     if (input.instructionMode === 'pdf') {
       input.instructionPdf ??= previous.instructionPdf;

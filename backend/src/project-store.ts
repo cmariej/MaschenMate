@@ -128,6 +128,31 @@ export interface ProjectStore {
   deleteAllForUser(userId: string): Promise<void>;
 }
 
+export function normalizeStoredProject(project: Project): Project {
+  const legacy = project as Project & {
+    progress?: Partial<ProjectProgress> | null;
+    instructionMode?: ProjectInput['instructionMode'];
+    instructionPdf?: string | null;
+    instructionPdfName?: string | null;
+    category?: ProjectCategory;
+  };
+  const progress = legacy.progress ?? {};
+  return {
+    ...legacy,
+    category: legacy.category ?? 'other',
+    instructionMode: legacy.instructionMode ?? 'manual',
+    instructionPdf: legacy.instructionPdf ?? null,
+    instructionPdfName: legacy.instructionPdfName ?? null,
+    progress: {
+      startedAt: progress.startedAt ?? null,
+      cancelledAt: progress.cancelledAt ?? null,
+      activeSectionId: progress.activeSectionId ?? null,
+      completedRows: progress.completedRows ?? {},
+      changelog: progress.changelog ?? [],
+    },
+  };
+}
+
 interface ProjectFile {
   version: 1;
   projects: Project[];
@@ -277,7 +302,7 @@ export class LocalProjectStore implements ProjectStore {
 }
 
 function cloneProject(project: Project): Project {
-  return structuredClone(project);
+  return normalizeStoredProject(structuredClone(project));
 }
 
 function isProjectFile(value: unknown): value is ProjectFile {

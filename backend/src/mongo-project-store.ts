@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import mongoose, { Schema, model } from 'mongoose';
-import type { Project, ProjectInput, ProjectStore } from './project-store.js';
+import { normalizeStoredProject, type Project, type ProjectInput, type ProjectStore } from './project-store.js';
 
 interface StoredProject {
   id: string;
@@ -69,11 +69,11 @@ export class MongoProjectStore implements ProjectStore {
 }
 
 function mapProject(document: StoredProject): Project {
-  return {
+  return normalizeStoredProject({
     ...structuredClone(document.data),
     id: document.id,
     userId: document.userId,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
-  };
+  } as Project);
 }
