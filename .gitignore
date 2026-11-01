@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+npm-debug.log*
+
+frontend/.angular/
+frontend/dist/
+backend/dist/
+backend/data/users.json
+backend/data/users.*.tmp

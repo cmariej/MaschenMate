@@ -1,0 +1,9 @@
+@if (pendingCount > 0) {
+  <button class="registration-banner" type="button" (click)="openRegistrations()">
+    <span class="registration-banner-icon" aria-hidden="true">!</span>
+    <span>Es gibt {{ pendingCount }} neue Registrierungs{{ pendingCount === 1 ? 'anfrage' : 'anfragen' }}. Bitte prüfe sie.</span>
+    <span class="registration-banner-action">Jetzt ansehen →</span>
+  </button>
+} @else if (error) {
+  <p class="registration-banner-error" role="alert">{{ error }}</p>
+}

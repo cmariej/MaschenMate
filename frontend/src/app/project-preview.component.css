@@ -1,0 +1,133 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.project-card {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #eee1e7;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 82%);
+  box-shadow: 0 8px 26px rgb(92 66 58 / 5%);
+  color: #463c44;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgb(92 66 58 / 10%);
+}
+
+.project-card:focus-visible {
+  outline: 3px solid #b98eaa;
+  outline-offset: 3px;
+}
+
+.project-cover {
+  position: relative;
+  display: grid;
+  height: clamp(135px, 30vw, 170px);
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f8eef2, #eee8f3);
+}
+
+.project-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.project-icon {
+  font-size: 48px;
+}
+
+.badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+}
+
+.badge {
+  padding: 6px 9px;
+  border: 1px solid rgb(255 255 255 / 75%);
+  border-radius: 99px;
+  background: rgb(255 253 250 / 90%);
+  color: #765d70;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.card-content {
+  display: block;
+  padding: 17px;
+}
+
+.title-line,
+.meta,
+.progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title-line strong {
+  overflow: hidden;
+  color: #563c50;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 21px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 7px 13px;
+  margin: 5px 0 16px;
+  color: #988c93;
+  font-size: 9px;
+}
+
+.progress-label {
+  margin-bottom: 8px;
+  color: #756972;
+  font-size: 10px;
+}
+
+.progress-label strong {
+  color: #8e668a;
+  font-size: 12px;
+}
+
+.progress-track {
+  display: block;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #efe7ec;
+}
+
+.progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #927096, #bd8297);
+}
+
+.not-started {
+  color: #958790;
+  font-size: 10px;
+}

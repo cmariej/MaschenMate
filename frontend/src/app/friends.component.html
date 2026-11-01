@@ -1,0 +1,103 @@
+<section class="friends-page">
+  <div class="page-heading">
+    <button class="back-button" type="button" aria-label="Zurück zum Dashboard" (click)="backToDashboard()">←</button>
+    <div>
+      <span class="eyebrow">Gemeinsam kreativ</span>
+      <h1>Freunde</h1>
+      <p>Finde andere MaschenMate-Mitglieder und vernetze dich.</p>
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <p class="feedback error" role="alert">{{ errorMessage }}</p>
+  }
+  @if (successMessage) {
+    <p class="feedback success" role="status">{{ successMessage }}</p>
+  }
+
+  <section class="friends-card search-card">
+    <h2>Freunde hinzufügen</h2>
+    <form class="search-form" (ngSubmit)="search()">
+      <label class="sr-only" for="friend-search">Benutzername suchen</label>
+      <input id="friend-search" name="usernameQuery" [(ngModel)]="usernameQuery" placeholder="Benutzername suchen" autocomplete="off" />
+      <button class="primary-button" type="submit" [disabled]="searching">{{ searching ? 'Suche …' : 'Suchen' }}</button>
+    </form>
+    @if (results.length) {
+      <ul class="user-list">
+        @for (user of results; track user.id) {
+          <li class="user-row">
+            <img class="user-avatar" [src]="user.profileImage || '/avatar-placeholder.svg'" alt="" />
+            <div class="user-details"><strong>{{ user.name }}</strong><span>Benutzername: @{{ user.username }}</span></div>
+            @if (user.relationship === 'none') {
+              <button class="add-button" type="button" aria-label="Freundschaftsanfrage senden" title="Freundschaftsanfrage senden" [disabled]="busyUserId === user.id" (click)="sendRequest(user)">＋</button>
+            } @else {
+              <span class="relationship">{{ relationshipLabel(user.relationship) }}</span>
+            }
+          </li>
+        }
+      </ul>
+    } @else if (usernameQuery.trim().length >= 2 && !searching && !errorMessage) {
+      <p class="empty-state">Keine passenden Benutzer gefunden.</p>
+    }
+  </section>
+
+  <div class="friends-columns">
+    <section class="friends-card">
+      <h2>Erhaltene Anfragen <span class="count">{{ incoming.length }}</span></h2>
+      @if (incoming.length) {
+        <ul class="user-list">
+          @for (user of incoming; track user.id) {
+            <li class="user-row">
+              <img class="user-avatar" [src]="user.profileImage || '/avatar-placeholder.svg'" alt="" />
+              <div class="user-details"><strong>{{ user.name }}</strong><span>@{{ user.username }}</span></div>
+              <div class="row-actions">
+                <button class="accept-button" type="button" [disabled]="busyUserId === user.id" (click)="respond(user, true)">Annehmen</button>
+                <button class="decline-button" type="button" [disabled]="busyUserId === user.id" (click)="respond(user, false)">Ablehnen</button>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty-state">Du hast keine offenen Anfragen.</p>
+      }
+    </section>
+
+    <section class="friends-card">
+      <h2>Gesendete Anfragen <span class="count">{{ outgoing.length }}</span></h2>
+      @if (outgoing.length) {
+        <ul class="user-list">
+          @for (user of outgoing; track user.id) {
+            <li class="user-row">
+              <img class="user-avatar" [src]="user.profileImage || '/avatar-placeholder.svg'" alt="" />
+              <div class="user-details"><strong>{{ user.name }}</strong><span>Benutzername: @{{ user.username }}</span></div>
+              <span class="relationship">Ausstehend</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty-state">Du hast keine offenen gesendeten Anfragen.</p>
+      }
+    </section>
+
+    <section class="friends-card">
+      <h2>Deine Freunde <span class="count">{{ friends.length }}</span></h2>
+      @if (friends.length) {
+        <ul class="user-list">
+          @for (user of friends; track user.id) {
+            <li class="user-row">
+              <img class="user-avatar" [src]="user.profileImage || '/avatar-placeholder.svg'" alt="" />
+              <div class="user-details"><strong>{{ user.name }}</strong><span>@{{ user.username }}</span></div>
+              <button class="remove-button" type="button" [disabled]="busyUserId === user.id" (click)="removeFriend(user)">Entfernen</button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="empty-state">Deine Freundesliste ist noch leer.</p>
+      }
+    </section>
+  </div>
+
+  @if (loading) {
+    <p class="loading-state" role="status">Freundesliste wird geladen …</p>
+  }
+</section>

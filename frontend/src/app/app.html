@@ -1,0 +1,374 @@
+<main class="shell">
+  <section class="account-panel" [class.project-app]="auth.user() && !profileOpen" [class.legal-app]="isLegalPage">
+    @if (auth.user(); as currentUser) {
+      <header class="authenticated-header">
+        <a class="brand" href="/" aria-label="MaschenMate Startseite">
+          <img class="brand-logo" src="/logo.png" alt="" />
+        </a>
+        <div class="account-toolbar">
+          <button
+            class="avatar-trigger"
+            type="button"
+            aria-label="Profilmenü öffnen"
+            [attr.aria-expanded]="menuOpen"
+            (click)="menuOpen = !menuOpen"
+          >
+            <span class="avatar avatar-header">
+              <img [src]="currentUser.profileImage || '/avatar-placeholder.svg'" alt="" />
+            </span>
+          </button>
+          @if (menuOpen) {
+            <div class="profile-menu">
+              <div class="menu-user">
+                <strong>{{ currentUser.username }}</strong>
+                <span>{{ currentUser.name }}</span>
+              </div>
+              <button type="button" (click)="openFriends()">Meine Freunde</button>
+              @if (isAdmin) {
+                <button type="button" (click)="openAdminRegistrations()">Registrierungsanfragen</button>
+              }
+              <button type="button" (click)="openProfileSettings()">Profileinstellungen</button>
+              <button type="button" (click)="logout(); menuOpen = false">Abmelden</button>
+            </div>
+          }
+        </div>
+      </header>
+    } @else {
+      <a class="brand" href="/" aria-label="MaschenMate Startseite">
+        <img class="brand-logo" src="/logo.png" alt="" />
+      </a>
+    }
+
+    <div class="account-content">
+      @if (auth.user(); as user) {
+        @if (profileOpen) {
+          <div class="profile-heading">
+            <button class="back-button icon-action-button" type="button" (click)="closeProfileSettings()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
+            <div>
+              <span class="eyebrow">Dein Konto</span>
+              <h2>Profileinstellungen</h2>
+            </div>
+          </div>
+
+          <form class="settings-form" (ngSubmit)="saveProfile()" #profileForm="ngForm">
+            <div class="avatar-editor">
+              <span class="avatar avatar-large">
+                <img [src]="selectedAvatar || '/avatar-placeholder.svg'" alt="Profilbildvorschau" />
+              </span>
+              <div class="avatar-actions">
+                <label class="upload-button" for="avatar-file">
+                  {{ selectedAvatar ? 'Profilbild ändern' : 'Profilbild hinterlegen' }}
+                </label>
+                <input
+                  class="file-input"
+                  id="avatar-file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  (change)="onAvatarSelected($event)"
+                />
+                @if (selectedAvatar) {
+                  <button class="text-button delete-avatar" type="button" [disabled]="readingAvatar" (click)="removeAvatar()">Profilbild löschen</button>
+                }
+              </div>
+            </div>
+            <span class="help-text avatar-help">JPG, PNG oder WebP · maximal 5 MB</span>
+            @if (avatarError) {
+              <span class="field-message field-error avatar-help" role="alert">{{ avatarError }}</span>
+            }
+
+            <label for="profile-username">Benutzername</label>
+            <input
+              id="profile-username"
+              name="profileUsername"
+              type="text"
+              autocomplete="username"
+              [(ngModel)]="username"
+              (ngModelChange)="onUsernameChanged()"
+              (blur)="checkUsernameAvailability()"
+              required
+              minlength="5"
+              maxlength="20"
+              pattern="[a-zA-Z0-9._\x2d]+"
+            />
+            @if (usernameValidationError()) {
+              <span class="field-message field-error">{{ usernameValidationError() }}</span>
+            } @else if (availabilityError) {
+              <span class="field-message field-error">{{ availabilityError }}</span>
+            } @else if (usernameChecking) {
+              <span class="field-message">Benutzername wird geprüft …</span>
+            } @else if (usernameAvailable === false) {
+              <span class="field-message field-error">Dieser Benutzername ist bereits vergeben.</span>
+            } @else if (usernameAvailable === true && checkedUsername === username.trim().toLowerCase()) {
+              <span class="field-message field-success">Benutzername ist verfügbar.</span>
+            } @else {
+              <span class="help-text field-help">Mindestens 5 Zeichen, maximal 20. Erlaubt sind Buchstaben, Zahlen sowie . _ -.</span>
+            }
+
+            @if (profileError) {
+              <p class="form-error" role="alert">{{ profileError }}</p>
+            }
+            @if (profileSaved) {
+              <p class="field-message field-success" role="status">Deine Änderungen wurden gespeichert.</p>
+            }
+            <button
+              class="button submit-button"
+              type="submit"
+              [disabled]="savingProfile || readingAvatar || profileForm.invalid || usernameChecking || usernameAvailable !== true"
+            >
+              {{ savingProfile ? 'Wird gespeichert …' : 'Änderungen speichern' }}
+            </button>
+          </form>
+
+          <div class="settings-actions">
+            <button class="button button-secondary" type="button" (click)="logout()">Abmelden</button>
+            <button class="text-button danger-button" type="button" (click)="deleteDialogOpen = true">Konto löschen</button>
+          </div>
+        } @else {
+          <router-outlet />
+        }
+      } @else {
+        @if (isLegalPage) {
+          <router-outlet />
+        } @else {
+        <div class="account-heading">
+          <h2>{{ isRegistering ? 'Registrieren' : 'Login' }}</h2>
+          <p class="subtitle">
+            {{ isRegistering ? 'Erstelle dein kostenloses MaschenMate-Konto.' : 'Willkommen zurück bei MaschenMate!' }}
+          </p>
+        </div>
+        @if (registrationMessage) {
+          <p class="registration-notice" role="status">{{ registrationMessage }}</p>
+        }
+
+        <form class="auth-form" (ngSubmit)="submit()" #authForm="ngForm">
+          @if (isRegistering) {
+            <div class="registration-avatar">
+              <span class="avatar avatar-large">
+                <img [src]="selectedAvatar || '/avatar-placeholder.svg'" alt="Profilbildvorschau" />
+              </span>
+              <label class="camera-button" for="registration-avatar" aria-label="Profilbild auswählen">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7.5h3l1.5-2h7l1.5 2h3A1.5 1.5 0 0 1 21.5 9v9a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
+              </label>
+              <input
+                class="file-input"
+                id="registration-avatar"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                (change)="onAvatarSelected($event)"
+              />
+              <span class="avatar-caption">Profilbild (optional)</span>
+              @if (selectedAvatar) {
+                <button class="text-button delete-avatar avatar-remove" type="button" [disabled]="readingAvatar" (click)="removeAvatar()">
+                  Bild entfernen
+                </button>
+              }
+            </div>
+            <span class="help-text avatar-help">JPG, PNG oder WebP · maximal 5 MB</span>
+            @if (avatarError) {
+              <span class="field-message field-error avatar-help" role="alert">{{ avatarError }}</span>
+            }
+          }
+
+          @if (isRegistering) {
+            <label for="name">Dein Name</label>
+            <div class="input-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M4.5 20v-1.4a7.5 7.5 0 0 1 15 0V20" />
+              </svg>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                autocomplete="name"
+                placeholder="Dein Name"
+                [(ngModel)]="name"
+                required
+                maxlength="80"
+              />
+            </div>
+          }
+
+          <label for="username">Benutzername</label>
+          <div class="input-control">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M15.5 9.5a3.5 3.5 0 1 0-3.5 3.5c2.5 0 3.5-1 3.5-2.5v-1a2.5 2.5 0 0 0-5 0v1a2.5 2.5 0 0 0 4.3 1.7" />
+            </svg>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              placeholder="Benutzername"
+              [(ngModel)]="username"
+              (ngModelChange)="onUsernameChanged()"
+              (blur)="isRegistering && checkUsernameAvailability()"
+              [required]="isRegistering"
+              [minlength]="isRegistering ? 5 : 1"
+              maxlength="20"
+              pattern="[a-zA-Z0-9._\x2d]+"
+            />
+          </div>
+          @if (isRegistering) {
+            @if (usernameValidationError()) {
+              <span class="field-message field-error">{{ usernameValidationError() }}</span>
+            } @else if (availabilityError) {
+              <span class="field-message field-error">{{ availabilityError }}</span>
+            } @else if (usernameChecking) {
+              <span class="field-message">Benutzername wird geprüft …</span>
+            } @else if (usernameAvailable === false) {
+              <span class="field-message field-error">Dieser Benutzername ist bereits vergeben.</span>
+            } @else if (usernameAvailable === true && checkedUsername === username.trim().toLowerCase()) {
+              <span class="field-message field-success">Benutzername ist verfügbar.</span>
+            } @else {
+              <span class="help-text field-help">Mindestens 5 Zeichen, maximal 20. Erlaubt sind Buchstaben, Zahlen sowie . _ -.</span>
+            }
+          }
+
+          <div class="password-heading">
+            <label for="password">Passwort</label>
+          </div>
+          <div class="input-control password-control">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="11" rx="2" />
+              <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+            </svg>
+            <input
+              id="password"
+              name="password"
+              [type]="passwordVisible ? 'text' : 'password'"
+              [autocomplete]="isRegistering ? 'new-password' : 'current-password'"
+              placeholder="Passwort"
+              [(ngModel)]="password"
+              required
+              minlength="8"
+            />
+            <button
+              class="password-toggle"
+              type="button"
+              [attr.aria-label]="passwordVisible ? 'Passwort verbergen' : 'Passwort anzeigen'"
+              (click)="passwordVisible = !passwordVisible"
+            >
+              @if (passwordVisible) {
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" />
+                  <circle cx="12" cy="12" r="2.5" />
+                </svg>
+              } @else {
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m3 3 18 18M10.6 6.2A9.8 9.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a15 15 0 0 1-3.1 3.7M6.2 6.7C3.8 8.3 2.5 12 2.5 12s3.4 6 9.5 6a9 9 0 0 0 3-.5" />
+                  <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+                </svg>
+              }
+            </button>
+          </div>
+
+          @if (isRegistering) {
+            <span class="help-text password-help">Mindestens 8 Zeichen · Groß- und Kleinbuchstaben, mindestens eine Zahl und ein Sonderzeichen.</span>
+            @if (password && !registrationPasswordValid()) {
+              <span class="field-message field-error password-error">Das Passwort erfüllt noch nicht alle Anforderungen.</span>
+            }
+          }
+
+          @if (errorMessage) {
+            <p class="form-error" role="alert">{{ errorMessage }}</p>
+          }
+
+          <button
+            class="button submit-button"
+            type="submit"
+            [disabled]="auth.loading() || readingAvatar || authForm.invalid || (isRegistering && (!registrationPasswordValid() || usernameChecking || usernameAvailable !== true))"
+          >
+            {{ auth.loading() ? 'Einen Moment …' : isRegistering ? 'Konto erstellen' : 'Einloggen' }}
+          </button>
+        </form>
+
+        <div class="switch-divider">
+          <span>{{ isRegistering ? 'Bereits ein Konto?' : 'Noch kein Konto?' }}</span>
+        </div>
+        <button class="mode-button" type="button" (click)="toggleMode()">
+          {{ isRegistering ? 'Einloggen' : 'Registrieren' }}
+        </button>
+        }
+      }
+    </div>
+
+    @if (deleteDialogOpen) {
+      <div class="dialog-backdrop" (click)="deleteDialogOpen = false">
+        <section
+          class="confirm-dialog"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-title"
+          aria-describedby="delete-description"
+          (click)="$event.stopPropagation()"
+        >
+          <span class="dialog-icon" aria-hidden="true">!</span>
+          <h2 id="delete-title">Konto wirklich löschen?</h2>
+          <p id="delete-description">
+            Dein Konto und dein Profilbild werden dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+          </p>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" [disabled]="deletingAccount" (click)="deleteDialogOpen = false">
+              Abbrechen
+            </button>
+            <button class="button danger-confirm" type="button" [disabled]="deletingAccount" (click)="confirmDeleteAccount()">
+              {{ deletingAccount ? 'Wird gelöscht …' : 'Ja, Konto löschen' }}
+            </button>
+          </div>
+        </section>
+      </div>
+    }
+
+    @if (cropDialogOpen) {
+      <div class="dialog-backdrop crop-backdrop" (click)="cancelAvatarCrop()">
+        <section
+          class="confirm-dialog crop-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="crop-title"
+          (click)="$event.stopPropagation()"
+        >
+          <h2 id="crop-title">Profilbild anpassen</h2>
+          <p>Verschiebe den Bildausschnitt, bis dein Bild mittig im Kreis sitzt.</p>
+          <div class="crop-stage">
+            @if (cropSource) {
+              <img
+                class="crop-image"
+                [src]="cropSource"
+                alt="Bild zum Zuschneiden"
+                [style.width.px]="cropImageWidth"
+                [style.height.px]="cropImageHeight"
+                [style.left.px]="cropImageLeft"
+                [style.top.px]="cropImageTop"
+              />
+            }
+          </div>
+          <div class="crop-controls">
+            <label for="crop-horizontal">Horizontal</label>
+            <input id="crop-horizontal" type="range" min="0" max="100" step="1" [(ngModel)]="cropX" />
+            <label for="crop-vertical">Vertikal</label>
+            <input id="crop-vertical" type="range" min="0" max="100" step="1" [(ngModel)]="cropY" />
+            <label for="crop-zoom">Zoom</label>
+            <input id="crop-zoom" type="range" min="1" max="3" step="0.05" [(ngModel)]="cropZoom" />
+          </div>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" (click)="cancelAvatarCrop()">Abbrechen</button>
+            <button class="button submit-button" type="button" (click)="applyAvatarCrop()">Bild übernehmen</button>
+          </div>
+        </section>
+      </div>
+    }
+
+    <footer class="panel-footer">
+      <img class="footer-art" src="/footer-pic.png" alt="" />
+      <span>© 2026 MaschenMate</span>
+      <span>Mit <span class="heart">♥</span> für Kreative</span>
+      <a class="legal-footer-link" routerLink="/datenschutz-impressum">Datenschutz &amp; Impressum</a>
+    </footer>
+  </section>
+</main>

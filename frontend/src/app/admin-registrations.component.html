@@ -1,0 +1,41 @@
+<section class="admin-page">
+  <header class="admin-heading">
+    <button class="back-button" type="button" aria-label="Zurück zum Dashboard" (click)="backToDashboard()">←</button>
+    <div>
+      <span class="eyebrow">Administration</span>
+      <h1>Registrierungsanfragen</h1>
+      <p>Neue Konten werden erst nach deiner Freigabe aktiviert.</p>
+    </div>
+  </header>
+
+  @if (error) {
+    <p class="feedback error" role="alert">{{ error }}</p>
+  }
+  @if (message) {
+    <p class="feedback success" role="status">{{ message }}</p>
+  }
+  @if (loading) {
+    <p class="empty-state">Anfragen werden geladen …</p>
+  } @else if (registrations.length) {
+    <ul class="registration-list">
+      @for (user of registrations; track user.id) {
+        <li class="registration-card">
+          <img class="registration-avatar" [src]="user.profileImage || '/avatar-placeholder.svg'" alt="" />
+          <div class="registration-details">
+            <strong>{{ user.name }}</strong>
+            <span>@{{ user.username }}</span>
+            <time [attr.datetime]="user.createdAt">Registriert am {{ formatDate(user.createdAt) }}</time>
+          </div>
+          <div class="registration-actions">
+            <button class="approve-button" type="button" [disabled]="busyUserId === user.id" (click)="decide(user, true)">
+              {{ busyUserId === user.id ? 'Wird bearbeitet …' : 'Freischalten' }}
+            </button>
+            <button class="reject-button" type="button" [disabled]="busyUserId === user.id" (click)="decide(user, false)">Ablehnen</button>
+          </div>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="empty-state">Es gibt aktuell keine offenen Registrierungsanfragen.</p>
+  }
+</section>

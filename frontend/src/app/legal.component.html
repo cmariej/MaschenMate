@@ -1,0 +1,147 @@
+<article class="legal-page">
+  <header class="legal-heading">
+    <a class="back-link" routerLink="/dashboard" aria-label="Zurück">← Zurück</a>
+    <span class="eyebrow">MaschenMate</span>
+    <h1>Datenschutz &amp; Impressum</h1>
+    <p class="updated">Stand: 1. November 2026</p>
+  </header>
+
+  <section class="legal-section">
+    <h2>Impressum</h2>
+    <p>Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG), soweit diese Vorschrift auf das Angebot Anwendung findet:</p>
+    <address>
+      <strong>Clara Jung</strong><br />
+      Lindenplatz 1<br />
+      76185 Karlsruhe<br />
+      Deutschland
+    </address>
+    <p>
+      <strong>Kontakt:</strong>
+      <a href="mailto:kontakt@clara-jung.de">kontakt@clara-jung.de</a>
+    </p>
+    <p><strong>Umsatzsteuer-ID:</strong> Nicht vorhanden.</p>
+    <p>
+      MaschenMate ist ein privates, nicht kommerzielles Projekt. Es werden über diese Anwendung keine Waren oder
+      Dienstleistungen verkauft und keine Entgelte erhoben. Ein privater, nicht kommerzieller Betrieb bedeutet nicht
+      automatisch, dass gesetzliche Informationspflichten entfallen; die Anwendbarkeit der Vorschriften hängt vom konkreten
+      Betrieb ab.
+    </p>
+    <h3>Verantwortlich für den Inhalt</h3>
+    <p>Clara Jung, Anschrift wie oben.</p>
+    <h3>Urheberrecht</h3>
+    <p>
+      Soweit Inhalte auf dieser Seite von der Betreiberin erstellt wurden, unterliegen sie dem deutschen Urheberrecht.
+      Eine Nutzung außerhalb der gesetzlichen Schranken bedarf der vorherigen Zustimmung der jeweiligen Rechteinhaber.
+    </p>
+  </section>
+
+  <section class="legal-section">
+    <h2>Datenschutzerklärung</h2>
+    <h3>1. Verantwortliche</h3>
+    <p>
+      Verantwortlich für die Verarbeitung personenbezogener Daten im Zusammenhang mit MaschenMate ist:
+      Clara Jung, Lindenplatz 1, 76185 Karlsruhe, Deutschland.
+      E-Mail: <a href="mailto:kontakt@clara-jung.de">kontakt@clara-jung.de</a>.
+    </p>
+
+    <h3>2. Welche Daten verarbeitet werden</h3>
+    <ul>
+      <li><strong>Kontodaten:</strong> Name, Benutzername, interne Benutzerkennung und Passwort-Hash.</li>
+      <li><strong>Profil:</strong> freiwillig hinterlegtes Profilbild.</li>
+      <li><strong>Projekte:</strong> Projektname, Bild, Anleitung, Materialangaben, Fortschritt und zugehöriger Verlauf.</li>
+      <li><strong>Soziale Funktionen:</strong> Freundschaftsanfragen, bestätigte Freundschaften und daraus angezeigte Feed-Aktivitäten.</li>
+      <li><strong>Anmeldedaten:</strong> ein technisch notwendiges Sitzungscookie, das eine Anmeldung ermöglicht.</li>
+      <li>
+        <strong>Verbindungsdaten:</strong> Beim Abruf der Seite und der API können technisch erforderliche Daten wie IP-Adresse,
+        Zeitpunkt, angeforderte Adresse, Browser-/Geräteinformationen und HTTP-Status in Protokollen des Webservers,
+        Reverse-Proxys oder Hosting-Anbieters anfallen. Welche Protokolle tatsächlich geführt und wie lange sie gespeichert
+        werden, richtet sich nach der eingesetzten Hosting-Konfiguration und muss vom Betreiber dort geprüft werden.
+          Zusätzlich verarbeitet der Server IP-Adressen kurzfristig zur Begrenzung automatisierter Anmelde-, Benutzername-
+          und Freundesuchen-Anfragen.
+      </li>
+    </ul>
+    <p>
+      Passwörter werden nicht im Klartext gespeichert, sondern vor der Speicherung mit bcrypt gehasht. Profil- und
+      Projektbilder werden als Bilddaten im Anwendungsdatensatz gespeichert.
+    </p>
+
+    <h3>3. Zwecke und Rechtsgrundlagen</h3>
+    <p>
+      Die Daten werden verarbeitet, damit Nutzer ein Konto führen, sich anmelden, Projekte und Fortschritte verwalten,
+      Freundschaften nutzen und Aktivitäten im Feed sehen können. Rechtsgrundlage ist, soweit die Verarbeitung für die
+      Bereitstellung dieser ausdrücklich genutzten Funktionen erforderlich ist, Art. 6 Abs. 1 lit. b DSGVO.
+      Die Verarbeitung notwendiger Verbindungs- und Sicherheitsdaten zur Bereitstellung und Absicherung des Dienstes erfolgt
+      auf Grundlage berechtigter Interessen nach Art. 6 Abs. 1 lit. f DSGVO.
+    </p>
+
+    <h3>4. Login-Cookie</h3>
+    <p>
+      Für angemeldete Sitzungen setzt MaschenMate das Cookie <code>maschenmate_token</code>. Es enthält ein signiertes
+      Sitzungstoken, ist für JavaScript nicht zugänglich (<code>HttpOnly</code>) und wird im Produktivbetrieb mit
+      <code>Secure</code> übertragen. Das Cookie dient ausschließlich der Anmeldung und wird nach sieben Tagen ungültig;
+      ein gültiger Aufruf zur Wiederherstellung der Sitzung kann die Gültigkeit verlängern. Beim Abmelden oder Löschen des
+      Kontos wird es entfernt. Es werden in der Anwendung keine Analyse- oder Werbe-Cookies
+      eingesetzt. Das Login-Cookie ist für die ausdrücklich angeforderte Anmeldung erforderlich.
+    </p>
+
+    <h3>5. Speicherung, Hosting und Empfänger</h3>
+    <p>
+      Im lokalen Betrieb werden die Anwendungsdaten in lokalen JSON-Dateien gespeichert. Die vorgesehene
+      Produktionskonfiguration verwendet MongoDB für Konten, Projekte, Materialien, Freundschaften und Aktivitäten.
+      Das Deployment-Konzept sieht ein Frontend über GitHub Pages sowie API und Datenbank auf einem getrennt betriebenen
+      Homeserver vor. Ob und mit welchen Anbietern diese konkrete Website tatsächlich betrieben wird, welcher Serverstandort
+      gilt und welche Protokoll- oder Backup-Speicherfristen bestehen, muss vor Veröffentlichung anhand der realen
+      Konfiguration ergänzt und bestätigt werden.
+    </p>
+    <p>
+      Soweit Hosting-Anbieter oder technische Dienstleister Zugriff auf personenbezogene Daten erhalten, dürfen sie dies nur
+      im erforderlichen Umfang und auf einer geeigneten rechtlichen Grundlage. Eine Übermittlung in Staaten außerhalb des
+      Europäischen Wirtschaftsraums kann bei externen Hosting-Diensten nicht ausgeschlossen werden; sie ist vom Betreiber
+      anhand der tatsächlich genutzten Anbieter und der dafür geltenden Garantien zu prüfen. Die Anwendung bindet derzeit
+      keine Analyse-, Werbe- oder Google-Login-Dienste ein; die Anmeldung erfolgt mit Benutzername und Passwort.
+    </p>
+    <p>
+      Bestätigte Freunde können die im Feed angezeigten Aktivitäten sehen. Dazu gehören Name und Profilbild der handelnden
+      Person sowie Projektname, Projektbild, Projektart, Kategorie und bei einem abgeschlossenen Abschnitt dessen Name.
+    </p>
+
+    <h3>6. Speicherdauer und Löschung</h3>
+    <p>
+      Kontodaten und damit verknüpfte Projekte, Profilbilder, Freundschaften und Aktivitäten werden gespeichert, solange das
+      Konto besteht und die Funktionen genutzt werden. Das Konto kann in den Profileinstellungen gelöscht werden; dabei
+      löscht die Anwendung die zugehörigen Kontodaten, Projekte, Materialien, Freundschaften und eigenen Feed-Aktivitäten aus
+      dem aktiven Datenspeicher. Unabhängige Serverprotokolle und Sicherungskopien können abweichenden, vom Betreiber bzw.
+      Hosting-Anbieter festzulegenden Löschfristen unterliegen.
+    </p>
+
+    <h3>7. Deine Rechte</h3>
+    <p>Nach Maßgabe der gesetzlichen Voraussetzungen hast du insbesondere das Recht auf:</p>
+    <ul>
+      <li>Auskunft über verarbeitete personenbezogene Daten (Art. 15 DSGVO),</li>
+      <li>Berichtigung unrichtiger Daten (Art. 16 DSGVO),</li>
+      <li>Löschung und Einschränkung der Verarbeitung (Art. 17 und 18 DSGVO),</li>
+      <li>Datenübertragbarkeit (Art. 20 DSGVO),</li>
+      <li>Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO),</li>
+      <li>Beschwerde bei einer Datenschutzaufsichtsbehörde (Art. 77 DSGVO).</li>
+    </ul>
+    <p>
+      Für Anfragen zu diesen Rechten genügt eine Nachricht an
+      <a href="mailto:kontakt@clara-jung.de">kontakt@clara-jung.de</a>.
+      Zuständige Datenschutzaufsichtsbehörde am Betreiberstandort ist der Landesbeauftragte für den Datenschutz und die
+      Informationsfreiheit Baden-Württemberg. Informationen: <a href="https://www.baden-wuerttemberg.datenschutz.de/" target="_blank" rel="noopener noreferrer">baden-wuerttemberg.datenschutz.de</a>.
+    </p>
+
+    <h3>8. Bereitstellung der Daten</h3>
+    <p>
+      Die für ein Konto erforderlichen Angaben werden benötigt, um Registrierung, Anmeldung und Kontofunktionen zu ermöglichen.
+      Ohne diese Angaben kann kein Konto genutzt werden. Profilbild und Projektbilder sind freiwillig; die übrigen
+      Projektdaten gibst du selbst ein, wenn du die entsprechenden Funktionen verwendest.
+    </p>
+
+    <h3>9. Änderungen</h3>
+    <p>
+      Diese Hinweise können angepasst werden, wenn sich Funktionen, Datenverarbeitungen oder die Hosting-Konfiguration
+      ändern. Maßgeblich ist die jeweils hier veröffentlichte Fassung.
+    </p>
+  </section>
+</article>

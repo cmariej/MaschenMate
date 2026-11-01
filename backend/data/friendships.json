@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "friendships": [
+    {
+      "id": "75e12824-e1d9-4584-b069-4306a96cff2b",
+      "firstUserId": "5543117e-0897-449a-a221-a1fc4d76f812",
+      "secondUserId": "87dd7db3-ee27-4c1a-bb66-4d209fccf10e",
+      "requesterId": "5543117e-0897-449a-a221-a1fc4d76f812",
+      "status": "accepted",
+      "createdAt": "2026-11-01T16:39:26.254Z"
+    }
+  ]
+}

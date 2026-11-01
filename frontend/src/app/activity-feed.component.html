@@ -1,0 +1,56 @@
+<section class="feed-section" aria-labelledby="feed-title">
+  <header class="section-heading">
+    <div>
+      <span class="eyebrow">Aktuelles aus deinem Netzwerk</span>
+      <h2 id="feed-title">Feed</h2>
+    </div>
+    <button class="subtle-button" type="button" (click)="refresh.emit()" [disabled]="loading">Aktualisieren</button>
+  </header>
+  @if (error) {
+    <p class="notice error-notice" role="alert">{{ error }}</p>
+  }
+  @if (loading && !activities.length) {
+    <p class="feed-empty">Aktivitäten werden geladen …</p>
+  } @else if (activities.length) {
+    <div class="feed-list">
+      @for (activity of activities; track activity.id) {
+        <article class="feed-item" [class.feed-item-finished]="activity.type === 'finished'">
+          <div class="feed-actor">
+            <img class="feed-actor-avatar"
+              [src]="activity.actor.profileImage || '/avatar-placeholder.svg'"
+              [alt]="'Profilbild von ' + activity.actor.name" />
+            <div class="feed-actor-content">
+              <strong>{{ activity.actor.id === currentUserId ? 'Du' : activity.actor.name }}</strong>
+              @if (activity.actor.id !== currentUserId) {
+                <span>@{{ activity.actor.username }}</span>
+              }
+              <span>{{ message(activity) }}</span>
+            </div>
+            <time [attr.datetime]="activity.createdAt">{{ activityTime(activity.createdAt) }}</time>
+          </div>
+          <div class="feed-project" [class.feed-project-highlight]="activity.type === 'finished'">
+            @if (activity.projectImage) {
+              <img class="feed-project-image" [src]="activity.projectImage" [alt]="'Bild für ' + activity.projectName" />
+            } @else {
+              <div class="feed-project-placeholder" aria-hidden="true">🧶</div>
+            }
+            <div class="feed-project-info">
+              <h3>{{ activity.projectName }}</h3>
+              <div class="feed-project-labels">
+                <span>{{ activity.projectType === 'knitting' ? 'Stricken' : 'Häkeln' }}</span>
+                <span>{{ categoryName(activity.projectCategory) }}</span>
+                @if (activity.type === 'finished') {
+                  <strong>Fertiggestellt</strong>
+                } @else if (activity.type === 'cancelled') {
+                  <strong class="feed-cancelled-label">Abgebrochen</strong>
+                }
+              </div>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <p class="feed-empty">Noch keine Aktivitäten. Starte ein Projekt oder füge Freunde hinzu, um hier Neuigkeiten zu sehen.</p>
+  }
+</section>

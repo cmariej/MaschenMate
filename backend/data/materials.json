@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "users": {
+    "87dd7db3-ee27-4c1a-bb66-4d209fccf10e": {
+      "yarns": [
+        {
+          "id": "623f0c53-2a9b-4197-a922-1c35dddf88df",
+          "name": "Basic Acrylic chunky",
+          "brand": "Rico Design",
+          "color": "rot",
+          "colorCode": "005",
+          "needleSize": 7,
+          "length": 156,
+          "weight": 100,
+          "composition": [
+            {
+              "material": "Polyacryl",
+              "percentage": 100
+            }
+          ]
+        }
+      ],
+      "needles": [
+        {
+          "id": "0cff078f-e39c-4aab-b9f3-afffe3035227",
+          "type": "circular",
+          "size": 7
+        },
+        {
+          "id": "ddf89079-2685-464f-ba7a-5b9d518e849c",
+          "type": "circular",
+          "size": 4
+        }
+      ]
+    },
+    "5543117e-0897-449a-a221-a1fc4d76f812": {
+      "yarns": [
+        {
+          "id": "de15954f-cb6a-4350-91e3-ab07951b4dad",
+          "name": "Basic Acrylic chunky",
+          "brand": "Rico Design",
+          "color": "rot",
+          "colorCode": "005",
+          "needleSize": 4,
+          "length": 100,
+          "weight": 50,
+          "composition": [
+            {
+              "material": "Baumwolle",
+              "percentage": 100
+            }
+          ]
+        }
+      ],
+      "needles": [
+        {
+          "id": "0358d151-9f78-4556-8f56-cceb0d2b975e",
+          "type": "circular",
+          "size": 4
+        }
+      ]
+    }
+  }
+}

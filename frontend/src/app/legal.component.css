@@ -1,0 +1,120 @@
+:host {
+  display: block;
+}
+
+.legal-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 8px 0 34px;
+  color: #514740;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.legal-heading {
+  margin-bottom: 24px;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 23px;
+  color: #805d79;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.back-link:hover,
+.legal-page a:not(.back-link):hover {
+  text-decoration: underline;
+}
+
+.eyebrow {
+  display: block;
+  color: #a56d56;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.legal-heading h1 {
+  margin: 4px 0 3px;
+  color: #563c50;
+  font: 400 clamp(27px, 5vw, 36px) Georgia, 'Times New Roman', serif;
+  line-height: 1.2;
+}
+
+.updated {
+  margin: 0;
+  color: #92858b;
+  font-size: 11px;
+}
+
+.draft-notice {
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border: 1px solid #e8cf9b;
+  border-radius: 10px;
+  background: #fff9eb;
+  color: #6b5830;
+  font-size: 12px;
+}
+
+.legal-section {
+  margin: 18px 0;
+  padding: 21px;
+  border: 1px solid #eee1e7;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 62%);
+}
+
+.legal-section h2 {
+  margin: 0 0 14px;
+  color: #563c50;
+  font: 400 24px Georgia, 'Times New Roman', serif;
+}
+
+.legal-section h3 {
+  margin: 20px 0 6px;
+  color: #654c60;
+  font-size: 14px;
+}
+
+.legal-section p {
+  margin: 8px 0 12px;
+}
+
+.legal-section address {
+  margin: 10px 0 14px;
+  font-style: normal;
+}
+
+.legal-section ul {
+  padding-left: 22px;
+}
+
+.legal-section li {
+  margin: 5px 0;
+}
+
+.legal-page a {
+  color: #795871;
+  overflow-wrap: anywhere;
+}
+
+.legal-page code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #f5edf1;
+  font-size: 12px;
+}
+
+@media (max-width: 560px) {
+  .legal-page {
+    font-size: 12px;
+  }
+
+  .legal-section {
+    padding: 16px;
+  }
+}

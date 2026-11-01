@@ -1,0 +1,59 @@
+:host {
+  display: block;
+}
+
+.registration-banner {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid #e8cf9b;
+  border-radius: 12px;
+  background: #fff8e8;
+  color: #685326;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+
+.registration-banner-icon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8cf9b;
+  color: #634d20;
+  font-weight: 700;
+}
+
+.registration-banner-action {
+  margin-left: auto;
+  color: #795871;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.registration-banner-error {
+  margin: 0 0 16px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  background: #fff0ef;
+  color: #9d3e37;
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .registration-banner {
+    flex-wrap: wrap;
+  }
+
+  .registration-banner-action {
+    margin-left: 37px;
+  }
+}
