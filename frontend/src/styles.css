@@ -191,6 +191,12 @@ main.shell > .account-panel.legal-app {
   opacity: .4;
 }
 
+.row-counter .row-step-button {
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .pdf-progress-dashboard {
   display: grid;
   width: min(100%, 360px);

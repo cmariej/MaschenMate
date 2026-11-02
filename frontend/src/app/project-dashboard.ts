@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { faFolderOpen, faHouse, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faFolderOpen, faHouse, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
@@ -46,6 +46,7 @@ interface ExpandedRow {
 export class ProjectDashboard implements OnInit {
   @ViewChild('currentRowNumberInput') private currentRowNumberInput?: ElementRef<HTMLInputElement>;
   protected readonly faPlus = faPlus;
+  protected readonly faMinus = faMinus;
   protected readonly faHomeTab = faHouse;
   protected readonly faProjectsTab = faFolderOpen;
 

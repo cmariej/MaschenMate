@@ -145,9 +145,9 @@
             </form>
           } @else {
             <div class="row-counter">
-              <button type="button" aria-label="Eine Reihe zurück" [disabled]="busyProjectId === project.id || completedCurrentRows === 0" (click)="changeCurrentRow(project, -1)">−</button>
+              <button class="row-step-button" type="button" aria-label="Eine Reihe zurück" [disabled]="busyProjectId === project.id || completedCurrentRows === 0" (click)="changeCurrentRow(project, -1)"><app-fa-icon [icon]="faMinus" /></button>
               <button class="row-number-button" type="button" [disabled]="busyProjectId === project.id" aria-label="Reihennummer direkt eingeben" title="Klicken, um eine Reihennummer einzugeben" (click)="editCurrentRowNumber()">{{ currentRowNumber }}</button>
-              <button type="button" aria-label="Eine Reihe weiter" [disabled]="busyProjectId === project.id || !currentProjectNextRow" (click)="changeCurrentRow(project, 1)">+</button>
+              <button class="row-step-button" type="button" aria-label="Eine Reihe weiter" [disabled]="busyProjectId === project.id || !currentProjectNextRow" (click)="changeCurrentRow(project, 1)"><app-fa-icon [icon]="faPlus" /></button>
             </div>
           }
           <p class="row-caption">
