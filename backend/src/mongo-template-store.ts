@@ -46,7 +46,11 @@ export class MongoTemplateStore implements TemplateStore {
   }
   async findShared(id: string, userIds: string[]): Promise<ProjectTemplate | null> { const item = await TemplateModel.findOne({ id, userId: { $in: userIds }, shared: true }).select('-_id').lean(); return item ? structuredClone(item) : null; }
   async setShared(userId: string, id: string, shared: boolean): Promise<boolean> {
-    return (await TemplateModel.updateOne({ userId, id }, [{ $set: { shared, sharedAt: shared ? { $cond: [{ $and: ['$shared', { $ne: [{ $ifNull: ['$sharedAt', null] }, null] }] }, '$sharedAt', new Date().toISOString()] } : null } }])).matchedCount > 0;
+    return (await TemplateModel.updateOne(
+      { userId, id },
+      [{ $set: { shared, sharedAt: shared ? { $cond: [{ $and: ['$shared', { $ne: [{ $ifNull: ['$sharedAt', null] }, null] }] }, '$sharedAt', new Date().toISOString()] } : null } }],
+      { updatePipeline: true },
+    )).matchedCount > 0;
   }
   async find(userId: string, id: string): Promise<ProjectTemplate | null> { const item = await TemplateModel.findOne({ userId, id }).select('-_id').lean(); return item ? structuredClone(item) : null; }
   async findImage(userId: string, id: string): Promise<string | null> { const item = await TemplateModel.findOne({ userId, id }).select('image -_id').lean(); return item?.image ?? null; }
