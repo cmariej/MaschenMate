@@ -60,6 +60,8 @@ export class ProjectDashboard implements OnInit {
   protected projects: Project[] = [];
   protected loading = true;
   protected saving = false;
+  protected processingProjectImage = false;
+  private projectImageRequest = 0;
   protected error = '';
   protected feedError = '';
   protected feedLoading = true;
@@ -148,9 +150,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected get projectsToShow(): Project[] {
-    if (this.page === 'projects') return this.filteredProjects;
-    const current = this.currentProject;
-    return current ? [current] : [];
+    return this.filteredProjects;
   }
 
   protected get activeProjects(): Project[] {
@@ -376,7 +376,7 @@ export class ProjectDashboard implements OnInit {
       const returnPath = this.returnToEditorPath;
       this.returnToEditorPath = '';
       this.preserveProjectDraftOnPath = returnPath;
-      void this.router.navigateByUrl(returnPath);
+      void this.router.navigateByUrl(returnPath, { state: { projectReturnPath: this.projectReturnPath() } });
       return;
     }
     this.returnToEditorPath = '';
@@ -386,7 +386,7 @@ export class ProjectDashboard implements OnInit {
 
   protected openMaterialsFromEditor(): void {
     this.returnToEditorPath = this.router.url;
-    void this.router.navigateByUrl('/yarns');
+    void this.router.navigateByUrl('/yarns', { state: { projectReturnPath: this.projectReturnPath() } });
   }
 
   protected openNewProject(): void {
@@ -401,13 +401,13 @@ export class ProjectDashboard implements OnInit {
   protected editProject(project: Project): void {
     this.instructionOnlyEditor = false;
     this.setProjectDraft(project);
-    void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}/edit`);
+    void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}/edit`, { state: { projectReturnPath: this.projectReturnPath() } });
   }
 
   protected editProjectInstructions(project: Project): void {
     this.instructionOnlyEditor = true;
     this.setProjectDraft(project);
-    void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}/edit/instructions`);
+    void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}/edit/instructions`, { state: { projectReturnPath: this.projectReturnPath() } });
   }
 
   private setProjectDraft(project: Project): void {
@@ -531,11 +531,16 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected openProjectDetail(project: Project): void {
-    void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}`);
+    const projectReturnPath = this.page === 'home' ? '/dashboard' : '/projects';
+    void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}`, { state: { projectReturnPath } });
   }
 
   protected closeDetails(): void {
-    void this.router.navigateByUrl(this.pagePath(this.page));
+    void this.router.navigateByUrl(this.projectReturnPath());
+  }
+
+  private projectReturnPath(): '/dashboard' | '/projects' {
+    return history.state?.projectReturnPath === '/dashboard' ? '/dashboard' : '/projects';
   }
 
   protected changeCurrentRow(project: Project, delta: -1 | 1): void {
@@ -689,9 +694,11 @@ export class ProjectDashboard implements OnInit {
 
   protected closeEditor(): void {
     if (this.saving) return;
+    this.projectImageRequest++;
+    this.processingProjectImage = false;
     void this.router.navigateByUrl(this.editingId
       ? `/projects/${encodeURIComponent(this.editingId)}`
-      : this.pagePath(this.page));
+      : this.pagePath(this.page), { state: { projectReturnPath: this.projectReturnPath() } });
   }
 
   protected addSection(): void {
@@ -846,7 +853,7 @@ export class ProjectDashboard implements OnInit {
     entry.repeatRows.push({ instructions: '', stitchesPerRow: 1, yarnId: this.draft.yarns[0]?.id });
   }
 
-  protected onProjectImageSelected(event: Event): void {
+  protected async onProjectImageSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -861,46 +868,49 @@ export class ProjectDashboard implements OnInit {
       input.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        this.editorError = 'Das Projektbild konnte nicht gelesen werden.';
-        input.value = '';
-      } else {
-        const image = new Image();
-        image.onload = () => {
-          const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-          const context = canvas.getContext('2d');
-          if (!context) {
-            this.editorError = 'Das Projektbild konnte nicht optimiert werden.';
-          } else {
-            context.fillStyle = '#fff';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            context.drawImage(image, 0, 0, canvas.width, canvas.height);
-            const webp = canvas.toDataURL('image/webp', 0.82);
-            this.draft.image = webp.startsWith('data:image/webp,')
-              ? webp
-              : canvas.toDataURL('image/jpeg', 0.84);
-          }
-          input.value = '';
-          this.changeDetector.markForCheck();
-        };
-        image.onerror = () => {
-          this.editorError = 'Das Projektbild konnte nicht geöffnet werden.';
-          input.value = '';
-          this.changeDetector.markForCheck();
-        };
-        image.src = reader.result;
+    const request = ++this.projectImageRequest;
+    const draft = this.draft;
+    this.processingProjectImage = true;
+    input.value = '';
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Das Projektbild konnte nicht geöffnet werden.'));
+        image.src = objectUrl;
+      });
+      const scale = Math.min(1, 1200 / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Das Projektbild konnte nicht verarbeitet werden.');
+      context.fillStyle = '#fff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const encode = (type: string, quality: number) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+      let optimized = await encode('image/webp', 0.8);
+      if (!optimized || optimized.type !== 'image/webp') optimized = await encode('image/jpeg', 0.82);
+      if (!optimized) throw new Error('Das Projektbild konnte nicht verarbeitet werden.');
+      const data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Das Projektbild konnte nicht gelesen werden.'));
+        reader.onerror = () => reject(new Error('Das Projektbild konnte nicht gelesen werden.'));
+        reader.readAsDataURL(optimized);
+      });
+      if (request === this.projectImageRequest && this.draft === draft) draft.image = data;
+    } catch (error) {
+      if (request === this.projectImageRequest && this.draft === draft) {
+        this.editorError = error instanceof Error ? error.message : 'Das Projektbild konnte nicht verarbeitet werden.';
       }
-    };
-    reader.onerror = () => {
-      this.editorError = 'Das Projektbild konnte nicht gelesen werden.';
-      input.value = '';
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      if (request === this.projectImageRequest) {
+        this.processingProjectImage = false;
+        this.changeDetector.markForCheck();
+      }
+    }
   }
 
   protected onInstructionPdfSelected(event: Event): void {
@@ -940,6 +950,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected saveProject(): void {
+    if (this.processingProjectImage) return;
     this.editorError = '';
     if (!this.draft.instructionPdfName || this.draft.instructionMode !== 'pdf') this.pendingInstructionPdf = null;
     this.draft.progress ??= { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] };
@@ -998,7 +1009,7 @@ export class ProjectDashboard implements OnInit {
   private finishProjectSave(saved: Project): void {
     this.pendingInstructionPdf = null;
     this.saving = false;
-    void this.router.navigateByUrl(`/projects/${encodeURIComponent(saved.id)}`);
+    void this.router.navigateByUrl(`/projects/${encodeURIComponent(saved.id)}`, { state: { projectReturnPath: this.projectReturnPath() } });
     this.changeDetector.markForCheck();
   }
 

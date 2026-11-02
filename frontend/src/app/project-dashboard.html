@@ -163,8 +163,8 @@
           <div class="progress-track"><span [style.width.%]="progressPercent(project)"></span></div>
         } @else {
           <p>Wähle ein Projekt mit Anleitung, um deinen Reihenfortschritt zu starten.</p>
-          <button class="primary-button" type="button" (click)="openProjectDetail(project)">Projekt ansehen</button>
         }
+        <button class="secondary-button current-project-link" type="button" (click)="openProjectDetail(project)">Zum Projekt</button>
       </div>
     </section>
   } @else if (page === 'home') {
@@ -176,11 +176,12 @@
     </section>
   }
 
+  @if (page === 'projects') {
   <section class="project-list">
     <div class="section-heading">
       <div>
-        <span class="eyebrow">{{ page === 'projects' ? 'Deine Sammlung' : 'Im Fokus' }}</span>
-        <h2>{{ page === 'projects' ? 'Alle Projekte' : 'Mein aktuelles Projekt' }}</h2>
+        <span class="eyebrow">Deine Sammlung</span>
+        <h2>Alle Projekte</h2>
       </div>
       @if (page === 'projects') {
         <span class="project-count">{{ filteredProjects.length }} {{ filteredProjects.length === 1 ? 'Projekt' : 'Projekte' }}</span>
@@ -234,8 +235,6 @@
         <p>Lege ein Häkel- oder Strickprojekt an und halte Anleitung, Material und Fortschritt fest.</p>
         <button class="primary-button icon-action-button" type="button" (click)="openNewProject()" aria-label="Projekt anlegen" title="Projekt anlegen"><app-fa-icon [icon]="faPlus" /></button>
       </div>
-      } @else if (page === 'home') {
-        <div class="empty-state"><p>Du hast aktuell kein laufendes Projekt. Starte ein Projekt in deiner Projektübersicht.</p><button class="subtle-button" type="button" (click)="showPage('projects')">Zu deinen Projekten</button></div>
       } @else {
         <div class="empty-state"><p>Keine Projekte für diese Kategorie gefunden.</p></div>
       }
@@ -251,13 +250,9 @@
           />
         }
       </div>
-      @if (page === 'home') {
-        <div class="current-project-footer">
-          <button class="subtle-button" type="button" (click)="showPage('projects')">Weitere Projekte</button>
-        </div>
-      }
     }
   </section>
+  }
   @if (page === 'home') {
     <app-activity-feed
       [activities]="feedActivities"
@@ -340,6 +335,7 @@
     [instructionOnly]="instructionOnlyEditor"
     [projects]="projects"
     [saving]="saving"
+    [processingImage]="processingProjectImage"
     [editorError]="editorError"
     (back)="closeEditor()"
     (save)="saveProject()"

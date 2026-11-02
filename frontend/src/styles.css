@@ -124,7 +124,7 @@ main.shell > .account-panel.legal-app {
   flex-direction: column;
   justify-content: center;
   margin: 0 auto 34px;
-  padding: 28px;
+  padding: 36px 44px;
   border: 1px solid #eee1e7;
   border-radius: 22px;
   background: linear-gradient(145deg, #fff, #fbf5f8);
@@ -769,7 +769,7 @@ button.icon-action-button:focus-visible {
 @media (max-width: 480px) {
   .current-progress-card {
     min-height: 235px;
-    padding: 20px 14px;
+    padding: 28px 28px;
   }
 
   .row-counter {
@@ -1366,10 +1366,9 @@ details[open] > .disclosure-summary::after {
   padding-top: 4px;
 }
 
-.project-dashboard .current-project-footer {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
+.project-dashboard .current-project-link {
+  min-height: 44px;
+  margin-top: 28px;
 }
 
 .duplication-toast {

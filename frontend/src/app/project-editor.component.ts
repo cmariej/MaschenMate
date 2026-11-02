@@ -61,12 +61,13 @@ import {
               @if (draft.image) {
                 <div class="image-preview">
                   <img [src]="draft.image" alt="Projektvorschau" />
-                  <button type="button" class="text-button" (click)="draft.image = null">Bild entfernen</button>
+                  <button type="button" class="text-button" [disabled]="processingImage" (click)="draft.image = null">Bild entfernen</button>
                 </div>
               }
               <label class="file-picker">Bild auswählen
-                <input type="file" accept="image/jpeg,image/png,image/webp" (change)="imageSelected.emit($event)" />
+                <input type="file" accept="image/jpeg,image/png,image/webp" [disabled]="processingImage" (change)="imageSelected.emit($event)" />
               </label>
+              @if (processingImage) { <small role="status">Bild wird vorbereitet …</small> }
               <small>JPG, PNG oder WebP · maximal 5 MB</small>
             </div>
           </div>
@@ -298,7 +299,7 @@ import {
         }
         <footer class="editor-actions">
           <button class="secondary-button" type="button" [disabled]="saving" (click)="back.emit()">Abbrechen</button>
-          <button class="primary-button" type="submit" [disabled]="saving || projectForm.invalid">
+          <button class="primary-button" type="submit" [disabled]="saving || processingImage || projectForm.invalid">
             {{ saving ? 'Wird gespeichert …' : instructionOnly ? 'Anleitung speichern' : editing ? 'Änderungen speichern' : 'Projekt anlegen' }}
           </button>
         </footer>
@@ -363,6 +364,7 @@ export class ProjectEditorComponent {
   @Input() instructionOnly = false;
   @Input() projects: Project[] = [];
   @Input() saving = false;
+  @Input() processingImage = false;
   @Input() editorError = '';
   @Output() back = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();
