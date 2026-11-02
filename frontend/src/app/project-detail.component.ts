@@ -118,7 +118,6 @@ interface YarnUsage {
             <details class="detail-block pattern-section" [attr.aria-label]="'Abschnitt ' + section.name">
             <summary class="disclosure-summary pattern-section-heading">
               <h3>{{ section.name }}</h3>
-              <span class="section-progress">{{ sectionProgress[section.id] ?? 0 }}%</span>
             </summary>
             <div class="pattern-section-content">
             <div class="section-materials">

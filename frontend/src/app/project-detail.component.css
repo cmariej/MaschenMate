@@ -208,9 +208,17 @@
 .progress-section-entry {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) 128px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 8px;
+  gap: 6px;
+}
+
+.progress-section-entry.active {
+  padding: 8px;
+  border: 1px solid #d8c5d3;
+  border-radius: 12px;
+  background: #f3ebf1;
+  box-shadow: 0 3px 10px rgb(87 63 77 / 6%);
 }
 
 .progress-section-item {
@@ -277,8 +285,17 @@
 
 .progress-section-actions {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: center;
   gap: 6px;
+}
+
+.progress-section-actions:empty {
+  display: none;
+}
+
+.progress-section-actions > button {
+  width: 100%;
 }
 
 .progress-card .small-button {
@@ -492,6 +509,10 @@
 }
 
 @media (max-width: 480px) {
+  .progress-section-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .instructions-heading-actions,
   .pdf-instruction-actions {
     flex-wrap: wrap;
@@ -535,7 +556,7 @@
 
 .pattern-section-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 7px;
+  grid-template-columns: minmax(0, 1fr) 7px;
   min-height: 32px;
   align-items: center;
   justify-content: space-between;
@@ -867,31 +888,6 @@
 }
 
 @media (max-width: 480px) {
-  .progress-section-entry {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
-  }
-
-  .progress-section-entry.active {
-    padding: 8px;
-    border: 1px solid #d8c5d3;
-    border-radius: 12px;
-    background: #f3ebf1;
-    box-shadow: 0 3px 10px rgb(87 63 77 / 6%);
-  }
-
-  .progress-section-actions {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .progress-section-actions:empty {
-    display: none;
-  }
-
-  .progress-section-actions > button {
-    width: 100%;
-  }
-
   .progress-card .progress-row-complete-button,
   .progress-card .complete-section-button {
     padding-inline: 5px;
