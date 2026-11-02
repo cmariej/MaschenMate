@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, map, throwError } from 'rxjs';
 
 export type ProjectKind = 'crochet' | 'knitting';
 export type ProjectCategory = 'sweater' | 'hat' | 'scarf' | 'socks' | 'blanket' | 'bag' | 'accessory' | 'other';
@@ -206,6 +206,10 @@ export class ProjectService {
     return `${this.templatesUrl}/${encodeURIComponent(id)}/instruction-pdf`;
   }
 
+  downloadTemplatePdf(id: string): Observable<Blob> {
+    return this.downloadPdf(this.templatePdfUrl(id));
+  }
+
   templateImageUrl(id: string): string {
     return `${this.templatesUrl}/${encodeURIComponent(id)}/image`;
   }
@@ -227,8 +231,16 @@ export class ProjectService {
   }
 
   downloadInstructionPdf(projectId: string): Observable<Blob> {
-    return this.http.get(this.instructionPdfUrl(projectId), { responseType: 'blob', withCredentials: true }).pipe(
-      catchError((error: HttpErrorResponse) => this.handleError(error)),
+    return this.downloadPdf(this.instructionPdfUrl(projectId));
+  }
+
+  private downloadPdf(url: string): Observable<Blob> {
+    return this.http.get(url, { responseType: 'blob', withCredentials: true }).pipe(
+      map((pdf) => {
+        if (pdf.type.split(';')[0].toLowerCase() !== 'application/pdf' || !pdf.size) throw new Error('Die PDF-Anleitung konnte nicht geladen werden. Bitte versuche es erneut.');
+        return pdf;
+      }),
+      catchError((error: unknown) => error instanceof HttpErrorResponse ? this.handleError(error) : throwError(() => error)),
     );
   }
 

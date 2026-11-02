@@ -38,18 +38,29 @@ export class TemplateDetailComponent implements OnInit {
   protected shareError = '';
   protected pdfUrl: string | null = null;
   protected pdfPreview: SafeResourceUrl | null = null;
+  protected pdfLoading = false;
+  protected pdfError = '';
   protected readonly returnToFeed = history.state?.templateReturnPath === '/dashboard';
   private readonly feedActivityId = typeof history.state?.feedActivityId === 'string' ? history.state.feedActivityId : '';
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => { if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl); });
     const id = this.route.snapshot.paramMap.get('templateId');
     if (!id) { this.loading = false; this.error = 'Vorlage nicht gefunden.'; return; }
     this.projectService.getTemplate(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ template }) => {
         this.template = template;
         if (template.instructionMode === 'pdf' && template.instructionPdfName) {
-          this.pdfUrl = this.projectService.templatePdfUrl(template.id);
-          this.pdfPreview = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
+          this.pdfLoading = true;
+          this.projectService.downloadTemplatePdf(template.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+            next: (pdf) => {
+              this.pdfUrl = URL.createObjectURL(pdf);
+              this.pdfPreview = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
+              this.pdfLoading = false;
+              this.changeDetector.markForCheck();
+            },
+            error: (error: Error) => { this.pdfError = error.message; this.pdfLoading = false; this.changeDetector.markForCheck(); },
+          });
         }
         this.loading = false;
         this.changeDetector.markForCheck();

@@ -1,10 +1,11 @@
-import { Component, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { faArrowLeft, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
 import { Project, ProjectService } from './project.service';
 import { compareNames } from './name-sort';
+import { Subscription } from 'rxjs';
 
 export interface ProjectDetailRow {
   number: number;
@@ -221,12 +222,16 @@ interface YarnUsage {
             <div class="pdf-instruction-heading">
               <h4 id="pdf-instruction-title">PDF-Anleitung</h4>
               <div class="pdf-instruction-actions">
-                <button class="secondary-button" type="button" (click)="editInstructions.emit()">{{ instructionPdfHref ? 'Anleitung bearbeiten' : 'Anleitung hinzufügen' }}</button>
+                <button class="secondary-button" type="button" (click)="editInstructions.emit()">{{ project.instructionPdfName ? 'Anleitung bearbeiten' : 'Anleitung hinzufügen' }}</button>
                 @if (instructionPdfHref) { <a class="small-button" [href]="instructionPdfHref" target="_blank" rel="noopener">In neuem Tab öffnen</a> }
               </div>
             </div>
             @if (instructionPdfUrl) {
               <iframe [src]="instructionPdfUrl" [title]="'PDF-Anleitung für ' + project.name"></iframe>
+            } @else if (pdfLoading) {
+              <p class="form-hint" role="status">PDF-Anleitung wird geladen …</p>
+            } @else if (pdfError) {
+              <p class="form-hint" role="alert">{{ pdfError }}</p>
             } @else {
               <p class="form-hint">Für dieses Projekt ist noch keine PDF-Anleitung hinterlegt.</p>
             }
@@ -302,9 +307,17 @@ export class ProjectDetailComponent implements OnChanges {
   protected readonly faPen = faPen;
   protected instructionPdfUrl: SafeResourceUrl | null = null;
   protected instructionPdfHref: string | null = null;
+  protected pdfLoading = false;
+  protected pdfError = '';
 
   private readonly sanitizer = inject(DomSanitizer);
   private readonly projectService = inject(ProjectService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private pdfRequest: Subscription | null = null;
+  private pdfKey = '';
+
+  constructor() { this.destroyRef.onDestroy(() => this.clearPdf()); }
 
   @Input({ required: true }) project!: Project;
   @Input() category = '';
@@ -377,14 +390,36 @@ export class ProjectDetailComponent implements OnChanges {
     if (!this.project?.progress.cancelledAt) this.restartPending = false;
     if (this.templateSaved) this.templateFormOpen = false;
     if (this.project?.instructionMode !== 'pdf') {
-      this.instructionPdfHref = null;
-      this.instructionPdfUrl = null;
+      this.clearPdf();
       return;
     }
+    if (!this.project.instructionPdfName) { this.clearPdf(); return; }
+    const key = `${this.project.id}:${this.project.instructionPdfName}`;
+    if (this.pdfKey === key) return;
+    this.clearPdf();
+    this.pdfKey = key;
+    this.pdfLoading = true;
+    this.pdfRequest = this.projectService.downloadInstructionPdf(this.project.id).subscribe({
+      next: (pdf) => {
+        const url = URL.createObjectURL(pdf);
+        this.instructionPdfHref = url;
+        this.instructionPdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this.pdfLoading = false;
+        this.changeDetector.markForCheck();
+      },
+      error: (error: Error) => { this.pdfLoading = false; this.pdfError = error.message; this.changeDetector.markForCheck(); },
+    });
+  }
 
-    const url = this.projectService.instructionPdfUrl(this.project.id);
-    this.instructionPdfHref = url;
-    this.instructionPdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  private clearPdf(): void {
+    this.pdfRequest?.unsubscribe();
+    this.pdfRequest = null;
+    if (this.instructionPdfHref) URL.revokeObjectURL(this.instructionPdfHref);
+    this.instructionPdfHref = null;
+    this.instructionPdfUrl = null;
+    this.pdfKey = '';
+    this.pdfLoading = false;
+    this.pdfError = '';
   }
 
   protected yarnNameFor(yarnId?: string): string {

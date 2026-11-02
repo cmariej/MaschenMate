@@ -43,7 +43,9 @@
         @if (pdfUrl && pdfPreview) {
           <p><a class="template-pdf-link" [href]="pdfUrl" target="_blank" rel="noopener">PDF-Anleitung in neuem Tab öffnen</a></p>
           <iframe class="template-pdf" [src]="pdfPreview" [title]="'PDF-Anleitung für ' + item.name"></iframe>
-        } @else { <p>Keine PDF-Anleitung hinterlegt.</p> }
+        } @else if (pdfLoading) { <p role="status">PDF-Anleitung wird geladen …</p> }
+        @else if (pdfError) { <p class="template-detail-error" role="alert">{{ pdfError }}</p> }
+        @else { <p>Keine PDF-Anleitung hinterlegt.</p> }
         @for (section of item.pdfSections; track section.id) { <div class="template-pdf-section"><strong>{{ section.name }}</strong><span>{{ section.rowCount }} Reihen</span></div> }
       } @else {
         @for (section of item.sections; track section.id) {
