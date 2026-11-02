@@ -40,9 +40,9 @@
     <section class="template-detail-card">
       <h2>Anleitung</h2>
       @if (item.instructionMode === 'pdf') {
-        @if (pdfUrl && pdfPreview) {
+        @if (pdfUrl && pdfData; as pdf) {
           <p><a class="template-pdf-link" [href]="pdfUrl" target="_blank" rel="noopener">PDF-Anleitung in neuem Tab öffnen</a></p>
-          <iframe class="template-pdf" [src]="pdfPreview" [title]="'PDF-Anleitung für ' + item.name"></iframe>
+          <app-pdf-viewer [pdf]="pdf" />
         } @else if (pdfLoading) { <p role="status">PDF-Anleitung wird geladen …</p> }
         @else if (pdfError) { <p class="template-detail-error" role="alert">{{ pdfError }}</p> }
         @else { <p>Keine PDF-Anleitung hinterlegt.</p> }

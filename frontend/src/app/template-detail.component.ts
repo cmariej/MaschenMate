@@ -1,16 +1,16 @@
 import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { faArrowLeft, faShareNodes, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
 import { ProjectCategory, ProjectService, ProjectTemplate } from './project.service';
 import { compareNames } from './name-sort';
+import { PdfViewerComponent } from './pdf-viewer.component';
 
 @Component({
   selector: 'app-template-detail',
-  imports: [FormsModule, FontAwesomeIconComponent],
+  imports: [FormsModule, FontAwesomeIconComponent, PdfViewerComponent],
   templateUrl: './template-detail.component.html',
   styleUrl: './template-detail.component.css',
 })
@@ -23,7 +23,6 @@ export class TemplateDetailComponent implements OnInit {
   private readonly projectService = inject(ProjectService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly sanitizer = inject(DomSanitizer);
 
   protected template: ProjectTemplate | null = null;
   protected loading = true;
@@ -37,7 +36,7 @@ export class TemplateDetailComponent implements OnInit {
   protected sharing = false;
   protected shareError = '';
   protected pdfUrl: string | null = null;
-  protected pdfPreview: SafeResourceUrl | null = null;
+  protected pdfData: Blob | null = null;
   protected pdfLoading = false;
   protected pdfError = '';
   protected readonly returnToFeed = history.state?.templateReturnPath === '/dashboard';
@@ -55,7 +54,7 @@ export class TemplateDetailComponent implements OnInit {
           this.projectService.downloadTemplatePdf(template.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: (pdf) => {
               this.pdfUrl = URL.createObjectURL(pdf);
-              this.pdfPreview = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
+              this.pdfData = pdf;
               this.pdfLoading = false;
               this.changeDetector.markForCheck();
             },

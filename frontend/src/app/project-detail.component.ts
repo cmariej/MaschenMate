@@ -1,11 +1,11 @@
 import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { faArrowLeft, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
 import { Project, ProjectService } from './project.service';
 import { compareNames } from './name-sort';
 import { Subscription } from 'rxjs';
+import { PdfViewerComponent } from './pdf-viewer.component';
 
 export interface ProjectDetailRow {
   number: number;
@@ -26,7 +26,7 @@ interface YarnUsage {
 }
 
 @Component({
-  imports: [FormsModule, FontAwesomeIconComponent],
+  imports: [FormsModule, FontAwesomeIconComponent, PdfViewerComponent],
   selector: 'app-project-detail',
   styleUrl: './project-detail.component.css',
   template: `
@@ -226,8 +226,8 @@ interface YarnUsage {
                 @if (instructionPdfHref) { <a class="small-button" [href]="instructionPdfHref" target="_blank" rel="noopener">In neuem Tab öffnen</a> }
               </div>
             </div>
-            @if (instructionPdfUrl) {
-              <iframe [src]="instructionPdfUrl" [title]="'PDF-Anleitung für ' + project.name"></iframe>
+            @if (instructionPdfData; as pdf) {
+              <app-pdf-viewer [pdf]="pdf" />
             } @else if (pdfLoading) {
               <p class="form-hint" role="status">PDF-Anleitung wird geladen …</p>
             } @else if (pdfError) {
@@ -305,12 +305,11 @@ interface YarnUsage {
 export class ProjectDetailComponent implements OnChanges {
   protected readonly faArrowLeft = faArrowLeft;
   protected readonly faPen = faPen;
-  protected instructionPdfUrl: SafeResourceUrl | null = null;
+  protected instructionPdfData: Blob | null = null;
   protected instructionPdfHref: string | null = null;
   protected pdfLoading = false;
   protected pdfError = '';
 
-  private readonly sanitizer = inject(DomSanitizer);
   private readonly projectService = inject(ProjectService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
@@ -403,7 +402,7 @@ export class ProjectDetailComponent implements OnChanges {
       next: (pdf) => {
         const url = URL.createObjectURL(pdf);
         this.instructionPdfHref = url;
-        this.instructionPdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this.instructionPdfData = pdf;
         this.pdfLoading = false;
         this.changeDetector.markForCheck();
       },
@@ -416,7 +415,7 @@ export class ProjectDetailComponent implements OnChanges {
     this.pdfRequest = null;
     if (this.instructionPdfHref) URL.revokeObjectURL(this.instructionPdfHref);
     this.instructionPdfHref = null;
-    this.instructionPdfUrl = null;
+    this.instructionPdfData = null;
     this.pdfKey = '';
     this.pdfLoading = false;
     this.pdfError = '';

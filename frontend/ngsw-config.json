@@ -18,6 +18,12 @@
           "/*.css"
         ]
       }
+    },
+    {
+      "name": "pdf-viewer",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": { "files": ["/assets/pdfjs/**"] }
     }
   ]
 }
