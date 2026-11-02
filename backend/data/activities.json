@@ -65,6 +65,19 @@
       "sectionName": null,
       "id": "c731b192-430f-465c-a153-d01f99d6f816",
       "createdAt": "2026-11-01T19:43:27.309Z"
+    },
+    {
+      "eventKey": "f54bf821-b2ac-4682-abab-b4956f8e5cab:started",
+      "userId": "87dd7db3-ee27-4c1a-bb66-4d209fccf10e",
+      "projectId": "f54bf821-b2ac-4682-abab-b4956f8e5cab",
+      "projectName": "Testprojekt PDF ohne Abschnitte",
+      "projectImage": null,
+      "projectType": "knitting",
+      "projectCategory": "sweater",
+      "type": "started",
+      "sectionName": null,
+      "id": "7fe9f713-4725-4fb8-82e9-52f21afa4c53",
+      "createdAt": "2026-11-02T09:53:37.444Z"
     }
   ]
 }

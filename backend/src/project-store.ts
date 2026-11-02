@@ -37,6 +37,10 @@ export interface YarnComposition {
 
 export interface ProjectYarn extends Yarn {
   gauge: Gauge;
+  needUnknown: boolean;
+  plannedSkeins: number | null;
+  swatchWeightKnown: boolean;
+  swatchWeightGrams: number | null;
 }
 
 export interface Needle {
@@ -136,6 +140,17 @@ export interface ProjectStore {
   deleteAllForUser(userId: string): Promise<void>;
 }
 
+export class DuplicateProjectNameError extends Error {
+  constructor() {
+    super('Ein Projekt mit diesem Namen existiert bereits. Bitte wähle einen eindeutigen Namen.');
+    this.name = 'DuplicateProjectNameError';
+  }
+}
+
+function normalizedProjectName(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
 export function normalizeStoredProject(project: Project): Project {
   const legacy = project as Project & {
     progress?: Partial<ProjectProgress> | null;
@@ -152,6 +167,13 @@ export function normalizeStoredProject(project: Project): Project {
     instructionPdf: legacy.instructionPdf ?? null,
     instructionPdfName: legacy.instructionPdfName ?? null,
     pdfSections: legacy.pdfSections ?? [],
+    yarns: legacy.yarns.map((yarn) => ({
+      ...yarn,
+      needUnknown: yarn.needUnknown ?? (yarn.plannedSkeins == null),
+      plannedSkeins: yarn.plannedSkeins ?? null,
+      swatchWeightKnown: yarn.swatchWeightKnown ?? (yarn.swatchWeightGrams != null),
+      swatchWeightGrams: yarn.swatchWeightGrams ?? null,
+    })),
     progress: {
       startedAt: progress.startedAt ?? null,
       cancelledAt: progress.cancelledAt ?? null,
@@ -197,6 +219,9 @@ export class LocalProjectStore implements ProjectStore {
 
   async create(userId: string, input: ProjectInput): Promise<Project> {
     return this.mutate((projects) => {
+      if (projects.some((project) => project.userId === userId && normalizedProjectName(project.name) === normalizedProjectName(input.name))) {
+        throw new DuplicateProjectNameError();
+      }
       const now = new Date().toISOString();
       const project: Project = {
         ...structuredClone(input),
@@ -213,6 +238,9 @@ export class LocalProjectStore implements ProjectStore {
     return this.mutate((projects) => {
       const index = projects.findIndex((project) => project.userId === userId && project.id === projectId);
       if (index < 0) return { projects, result: null };
+      if (projects.some((project) => project.userId === userId && project.id !== projectId && normalizedProjectName(project.name) === normalizedProjectName(input.name))) {
+        throw new DuplicateProjectNameError();
+      }
       const updated: Project = {
         ...structuredClone(input),
         id: projectId,

@@ -36,6 +36,10 @@ export interface YarnComposition {
 
 export interface ProjectYarn extends Yarn {
   gauge: Gauge;
+  needUnknown: boolean;
+  plannedSkeins: number | null;
+  swatchWeightKnown: boolean;
+  swatchWeightGrams: number | null;
 }
 
 export interface Needle {
@@ -156,6 +160,12 @@ export class ProjectService {
     return `${this.apiUrl}/${encodeURIComponent(projectId)}/instruction-pdf`;
   }
 
+  downloadInstructionPdf(projectId: string): Observable<Blob> {
+    return this.http.get(this.instructionPdfUrl(projectId), { responseType: 'blob', withCredentials: true }).pipe(
+      catchError((error: HttpErrorResponse) => this.handleError(error)),
+    );
+  }
+
   list(): Observable<{ projects: Project[] }> {
     return this.http.get<{ projects: Project[] }>(this.apiUrl, { withCredentials: true }).pipe(
       catchError((error: HttpErrorResponse) => this.handleError(error)),
@@ -182,6 +192,26 @@ export class ProjectService {
 
   update(projectId: string, project: ProjectInput): Observable<{ project: Project }> {
     return this.http.put<{ project: Project }>(`${this.apiUrl}/${encodeURIComponent(projectId)}`, project, { withCredentials: true }).pipe(
+      catchError((error: HttpErrorResponse) => this.handleError(error)),
+    );
+  }
+
+  updateProgress(project: Project): Observable<{ project: Project }> {
+    const projectData: Record<string, unknown> = { ...project };
+    delete projectData['image'];
+    delete projectData['instructionPdf'];
+    delete projectData['instructionPdfName'];
+    return this.http.put<{ project: Project }>(`${this.apiUrl}/${encodeURIComponent(project.id)}`, projectData, { withCredentials: true }).pipe(
+      catchError((error: HttpErrorResponse) => this.handleError(error)),
+    );
+  }
+
+  uploadInstructionPdf(projectId: string, file: File): Observable<void> {
+    const url = `${this.instructionPdfUrl(projectId)}?name=${encodeURIComponent(file.name)}`;
+    return this.http.put<void>(url, file, {
+      headers: { 'Content-Type': 'application/pdf' },
+      withCredentials: true,
+    }).pipe(
       catchError((error: HttpErrorResponse) => this.handleError(error)),
     );
   }

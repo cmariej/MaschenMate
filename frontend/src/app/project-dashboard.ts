@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { faFolderOpen, faHouse, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { NavigationEnd, Router } from '@angular/router';
@@ -44,6 +44,7 @@ interface ExpandedRow {
   templateUrl: './project-dashboard.html',
 })
 export class ProjectDashboard implements OnInit {
+  @ViewChild('currentRowNumberInput') private currentRowNumberInput?: ElementRef<HTMLInputElement>;
   protected readonly faPlus = faPlus;
   protected readonly faHomeTab = faHouse;
   protected readonly faProjectsTab = faFolderOpen;
@@ -52,6 +53,7 @@ export class ProjectDashboard implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectService = inject(ProjectService);
   private readonly progressSectionCache = new WeakMap<Project, ProjectSection[]>();
+  private preferredCurrentProjectId = '';
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   protected projects: Project[] = [];
@@ -65,6 +67,7 @@ export class ProjectDashboard implements OnInit {
   protected currentRowInput: number | null = null;
   protected currentRowInputError = '';
   protected editorError = '';
+  private pendingInstructionPdf: File | null = null;
   protected busyProjectId = '';
   protected editingId: string | null = null;
   protected draft: ProjectInput = this.newProject();
@@ -114,7 +117,9 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected get recentProjects(): Project[] {
-    return this.projects.slice(0, 3);
+    const current = this.currentProject;
+    const remaining = this.projects.filter((project) => project.id !== current?.id);
+    return (current ? [current, ...remaining] : remaining).slice(0, 3);
   }
 
   protected get authUserId(): string | null {
@@ -152,7 +157,23 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected get currentProject(): Project | null {
-    return this.activeProjects[0] ?? null;
+    return this.activeProjects.find((project) => project.id === this.preferredCurrentProjectId)
+      ?? this.activeProjects[0]
+      ?? null;
+  }
+
+  protected makeCurrentProject(project: Project): void {
+    if (!this.activeProjects.some((active) => active.id === project.id)) return;
+    this.preferredCurrentProjectId = project.id;
+    const userId = this.auth.user()?.id;
+    if (userId) {
+      try {
+        localStorage.setItem(`maschenmate-current-project:${userId}`, project.id);
+      } catch {
+        // Keep the current selection for this session if browser storage is unavailable.
+      }
+    }
+    this.changeDetector.markForCheck();
   }
 
   protected get currentSection(): ProjectSection | null {
@@ -236,6 +257,7 @@ export class ProjectDashboard implements OnInit {
 
     if (segments[0] === 'projects' && segments[1] === 'new') {
       this.editingId = null;
+      this.pendingInstructionPdf = null;
       this.draft = this.newProject();
       this.editorError = '';
       this.view = 'project-edit';
@@ -303,6 +325,14 @@ export class ProjectDashboard implements OnInit {
       next: ({ projects }) => {
         this.projects = projects.map((project) => this.normalizeProject(project))
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+        const userId = this.auth.user()?.id;
+        if (userId) {
+          try {
+            this.preferredCurrentProjectId = localStorage.getItem(`maschenmate-current-project:${userId}`) ?? '';
+          } catch {
+            this.preferredCurrentProjectId = '';
+          }
+        }
         this.loading = false;
         this.syncRoute(this.router.url);
         this.changeDetector.markForCheck();
@@ -355,6 +385,7 @@ export class ProjectDashboard implements OnInit {
 
   protected openNewProject(): void {
     this.editingId = null;
+    this.pendingInstructionPdf = null;
     this.draft = this.newProject();
     this.editorError = '';
     void this.router.navigateByUrl('/projects/new');
@@ -368,6 +399,7 @@ export class ProjectDashboard implements OnInit {
   private setProjectDraft(project: Project): void {
     const { id, userId, createdAt, updatedAt, patternYarn, ...input } = structuredClone(project);
     this.editingId = id;
+    this.pendingInstructionPdf = null;
     const projectYarns = input.yarns.map((yarn) => this.normalizeProjectYarn(yarn));
     const projectNeedles = input.needles.map((needle) => this.materials.needles.find((libraryNeedle) => libraryNeedle.id === needle.id) ?? needle);
     this.draft = {
@@ -518,6 +550,7 @@ export class ProjectDashboard implements OnInit {
     this.currentRowInput = this.currentRowNumber;
     this.currentRowInputError = '';
     this.editingCurrentRow = true;
+    setTimeout(() => this.currentRowNumberInput?.nativeElement.focus());
   }
 
   protected cancelCurrentRowEdit(): void {
@@ -655,6 +688,99 @@ export class ProjectDashboard implements OnInit {
     });
   }
 
+  protected duplicateSection(index: number): void {
+    const section = this.draft.sections[index];
+    if (!section) return;
+    if (this.draft.sections.length >= 50) {
+      this.editorError = 'Ein Projekt kann höchstens 50 Abschnitte enthalten.';
+      return;
+    }
+    const copy = structuredClone(section);
+    copy.id = this.createId();
+    copy.name = `${section.name} (Kopie)`.slice(0, 100);
+    copy.entries = copy.entries.map((entry) => ({ ...entry, id: this.createId() }));
+    this.draft.sections.push(copy);
+    this.editorError = '';
+  }
+
+  protected duplicatePdfSection(index: number): void {
+    const section = this.draft.pdfSections[index];
+    if (!section) return;
+    if (this.draft.pdfSections.length >= 50) {
+      this.editorError = 'Ein Projekt kann höchstens 50 PDF-Abschnitte enthalten.';
+      return;
+    }
+    this.draft.pdfSections.push({
+      ...structuredClone(section),
+      id: this.createId(),
+      name: `${section.name} (Kopie)`.slice(0, 100),
+    });
+    this.editorError = '';
+  }
+
+  protected duplicateEntry(sectionIndex: number, entryIndex: number): void {
+    const section = this.draft.sections[sectionIndex];
+    const entry = section?.entries[entryIndex];
+    if (!section || !entry) return;
+    if (section.entries.length >= 300) {
+      this.editorError = `Der Abschnitt „${section.name}“ kann höchstens 300 Anweisungen enthalten.`;
+      return;
+    }
+    const rowCount = entry.toRow - entry.fromRow + 1;
+    if (this.lastRow(section) + rowCount > 10_000) {
+      this.editorError = 'Die duplizierte Anweisung würde die Grenze von 10.000 Reihen überschreiten.';
+      return;
+    }
+    const copy = structuredClone(entry);
+    copy.id = this.createId();
+    copy.fromRow = entry.toRow + 1;
+    copy.toRow = copy.fromRow + rowCount - 1;
+    for (const following of section.entries.slice(entryIndex + 1)) {
+      following.fromRow += rowCount;
+      following.toRow += rowCount;
+    }
+    section.entries.splice(entryIndex + 1, 0, copy);
+    this.editorError = '';
+  }
+
+  protected duplicateProject(projectId: string): void {
+    const source = this.projects.find((project) => project.id === projectId);
+    if (!source) return;
+    const normalized = this.normalizeProject(source);
+    const { id, userId, createdAt, updatedAt, ...input } = structuredClone(normalized);
+    this.editingId = null;
+    this.pendingInstructionPdf = null;
+    this.draft = {
+      ...input,
+      name: this.nextDuplicateProjectName(source.name),
+      sections: input.sections.map((section) => ({
+        ...section,
+        id: this.createId(),
+        entries: section.entries.map((entry) => ({ ...entry, id: this.createId() })),
+      })),
+      pdfSections: input.pdfSections.map((section) => ({ ...section, id: this.createId() })),
+      instructionPdf: null,
+      progress: { startedAt: null, activeSectionId: null, pdfProgress: 0, completedRows: {}, changelog: [] },
+    };
+    this.editorError = '';
+    this.saving = false;
+    if (source.instructionMode === 'pdf' && source.instructionPdfName) {
+      this.saving = true;
+      this.projectService.downloadInstructionPdf(source.id).subscribe({
+        next: (blob) => {
+          this.pendingInstructionPdf = new File([blob], source.instructionPdfName ?? 'Anleitung.pdf', { type: 'application/pdf' });
+          this.saving = false;
+          this.changeDetector.markForCheck();
+        },
+        error: (error: Error) => {
+          this.editorError = `Die PDF-Vorlage konnte nicht kopiert werden. Bitte lade sie erneut hoch: ${error.message}`;
+          this.saving = false;
+          this.changeDetector.markForCheck();
+        },
+      });
+    }
+  }
+
   protected removeSection(index: number): void {
     const [section] = this.draft.sections.splice(index, 1);
     delete this.draft.progress.completedRows[section.id];
@@ -713,10 +839,36 @@ export class ProjectDashboard implements OnInit {
     reader.onload = () => {
       if (typeof reader.result !== 'string') {
         this.editorError = 'Das Projektbild konnte nicht gelesen werden.';
+        input.value = '';
       } else {
-        this.draft.image = reader.result;
+        const image = new Image();
+        image.onload = () => {
+          const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const context = canvas.getContext('2d');
+          if (!context) {
+            this.editorError = 'Das Projektbild konnte nicht optimiert werden.';
+          } else {
+            context.fillStyle = '#fff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const webp = canvas.toDataURL('image/webp', 0.82);
+            this.draft.image = webp.startsWith('data:image/webp,')
+              ? webp
+              : canvas.toDataURL('image/jpeg', 0.84);
+          }
+          input.value = '';
+          this.changeDetector.markForCheck();
+        };
+        image.onerror = () => {
+          this.editorError = 'Das Projektbild konnte nicht geöffnet werden.';
+          input.value = '';
+          this.changeDetector.markForCheck();
+        };
+        image.src = reader.result;
       }
-      input.value = '';
     };
     reader.onerror = () => {
       this.editorError = 'Das Projektbild konnte nicht gelesen werden.';
@@ -743,26 +895,27 @@ export class ProjectDashboard implements OnInit {
     }
 
     this.draft.instructionMode = 'pdf';
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== 'string' || !reader.result.startsWith('data:application/pdf;base64,JVBERi0')) {
+    void file.slice(0, 5).arrayBuffer().then((header) => {
+      if (new TextDecoder().decode(header) !== '%PDF-') {
         this.editorError = 'Die ausgewählte Datei ist keine gültige PDF-Datei.';
       } else {
-        this.draft.instructionPdf = reader.result;
+        this.pendingInstructionPdf = file;
+        this.draft.instructionPdf = null;
         this.draft.instructionPdfName = file.name;
         this.draft.instructionMode = 'pdf';
       }
       input.value = '';
-    };
-    reader.onerror = () => {
+      this.changeDetector.markForCheck();
+    }).catch(() => {
       this.editorError = 'Die PDF-Datei konnte nicht gelesen werden.';
       input.value = '';
-    };
-    reader.readAsDataURL(file);
+      this.changeDetector.markForCheck();
+    });
   }
 
   protected saveProject(): void {
     this.editorError = '';
+    if (!this.draft.instructionPdfName || this.draft.instructionMode !== 'pdf') this.pendingInstructionPdf = null;
     this.draft.progress ??= { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] };
     this.draft.progress.pdfProgress ??= 0;
     this.draft.progress.completedRows ??= {};
@@ -781,6 +934,7 @@ export class ProjectDashboard implements OnInit {
 
     // Fill optional legacy fields so requests always have the complete shape
     // expected by the API, even when editing an older project.
+    const pdfToUpload = this.draft.instructionMode === 'pdf' ? this.pendingInstructionPdf : null;
     this.saving = true;
     const request = this.editingId
       ? this.projectService.update(this.editingId, this.draft)
@@ -791,9 +945,22 @@ export class ProjectDashboard implements OnInit {
         this.projects = [saved, ...this.projects.filter((item) => item.id !== project.id)]
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
         this.editingId = saved.id;
-        this.saving = false;
-        void this.router.navigateByUrl(`/projects/${encodeURIComponent(saved.id)}`);
-        this.changeDetector.markForCheck();
+        if (pdfToUpload) {
+          this.projectService.uploadInstructionPdf(saved.id, pdfToUpload).subscribe({
+            next: () => {
+              const uploaded = { ...saved, instructionPdfName: pdfToUpload.name };
+              this.projects = this.projects.map((item) => item.id === uploaded.id ? uploaded : item);
+              this.finishProjectSave(uploaded);
+            },
+            error: (error: Error) => {
+              this.editorError = `Projekt gespeichert, aber PDF-Upload fehlgeschlagen: ${error.message}`;
+              this.saving = false;
+              this.changeDetector.markForCheck();
+            },
+          });
+          return;
+        }
+        this.finishProjectSave(saved);
       },
       error: (error: Error) => {
         this.editorError = error.message;
@@ -803,9 +970,18 @@ export class ProjectDashboard implements OnInit {
     });
   }
 
+  private finishProjectSave(saved: Project): void {
+    this.pendingInstructionPdf = null;
+    this.saving = false;
+    void this.router.navigateByUrl(`/projects/${encodeURIComponent(saved.id)}`);
+    this.changeDetector.markForCheck();
+  }
+
   private validateProjectDraft(): string | null {
     const project = this.draft;
     if (!project.name?.trim() || project.name.trim().length > 100) return 'Bitte gib einen Projektnamen mit höchstens 100 Zeichen ein.';
+    const normalizedProjectName = project.name.trim().toLocaleLowerCase();
+    if (this.projects.some((item) => item.id !== this.editingId && item.name.trim().toLocaleLowerCase() === normalizedProjectName)) return 'Ein Projekt mit diesem Namen existiert bereits. Bitte wähle einen eindeutigen Namen.';
     if (!['knitting', 'crochet'].includes(project.type)) return 'Bitte wähle eine gültige Projektart aus.';
     if (!this.categories.some((category) => category.value === project.category)) return 'Bitte wähle eine gültige Kategorie aus.';
     if (project.yarns.length > 30 || project.needles.length > 30 || project.sections.length > 50 || project.pdfSections.length > 50) return 'Das Projekt enthält mehr Materialien oder Abschnitte als erlaubt.';
@@ -816,6 +992,8 @@ export class ProjectDashboard implements OnInit {
       if ((yarn.brand ?? '').length > 100 || (yarn.color ?? '').length > 100 || (yarn.colorCode ?? '').length > 40) return `Die Angaben für „${yarn.name}“ sind zu lang.`;
       if (!this.isPositiveFinite(yarn.needleSize, 100) || !this.isPositiveFinite(yarn.length, 1_000_000) || !this.isPositiveFinite(yarn.weight, 1_000_000)) return `Bitte prüfe Nadelstärke, Lauflänge und Gewicht für „${yarn.name}“.`;
       if (!this.isPositiveFinite(yarn.gauge?.stitches, 1000) || !this.isPositiveFinite(yarn.gauge?.rows, 1000)) return `Bitte gib für „${yarn.name}“ eine gültige Maschenprobe ein.`;
+      if (!yarn.needUnknown && (yarn.plannedSkeins === null || !Number.isInteger(yarn.plannedSkeins) || yarn.plannedSkeins < 1 || yarn.plannedSkeins > 500)) return `Bitte gib für „${yarn.name}“ eine Knäuelanzahl zwischen 1 und 500 an oder markiere den Bedarf als unbekannt.`;
+      if (yarn.swatchWeightGrams !== null && !this.isPositiveFinite(yarn.swatchWeightGrams, 1000)) return `Bitte gib für „${yarn.name}“ ein gültiges Gewicht der Maschenprobe an.`;
       if (yarn.composition.length > 20 || yarn.composition.some((item) => !item.material.trim() || item.material.trim().length > 60 || !this.isPositiveFinite(item.percentage, 100))) return `Bitte prüfe die Materialzusammensetzung für „${yarn.name}“.`;
       if (yarn.composition.length && Math.round(yarn.composition.reduce((sum, item) => sum + item.percentage, 0) * 100) / 100 !== 100) return `Die Materialanteile für „${yarn.name}“ müssen zusammen 100 % ergeben.`;
     }
@@ -830,7 +1008,7 @@ export class ProjectDashboard implements OnInit {
     if (project.gauge && (!this.isPositiveFinite(project.gauge.pattern.stitches, 1000) || !this.isPositiveFinite(project.gauge.pattern.rows, 1000) || !this.isPositiveFinite(project.gauge.personal.stitches, 1000) || !this.isPositiveFinite(project.gauge.personal.rows, 1000))) return 'Bitte prüfe die Maschenprobe.';
 
     if (project.instructionMode === 'pdf') {
-      if ((!project.instructionPdf && !this.editingId) || (project.instructionPdf && !project.instructionPdf.startsWith('data:application/pdf;base64,JVBERi0'))) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
+      if ((!project.instructionPdf && !this.editingId && !this.pendingInstructionPdf) || (project.instructionPdf && !project.instructionPdf.startsWith('data:application/pdf;base64,JVBERi0'))) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
       if (!project.instructionPdfName?.trim() || project.instructionPdfName.length > 255) return 'Der Dateiname der PDF-Anleitung ist ungültig.';
       const pdfSectionIds = new Set<string>();
       for (const section of project.pdfSections) {
@@ -929,6 +1107,13 @@ export class ProjectDashboard implements OnInit {
     this.saveProgress(next);
   }
 
+  protected setCurrentSection(project: Project, sectionId: string): void {
+    if (project.progress.activeSectionId === sectionId || this.busyProjectId === project.id) return;
+    this.cancelCurrentRowEdit();
+    project.progress.activeSectionId = sectionId;
+    this.selectSection(project);
+  }
+
   protected completeNextRow(project: Project): void {
     const section = this.progressSection(project, project.progress.activeSectionId);
     if (!section) return;
@@ -951,9 +1136,9 @@ export class ProjectDashboard implements OnInit {
 
   protected saveProgress(project: Project): void {
     this.busyProjectId = project.id;
-    this.projectService.update(project.id, project).subscribe({
+    this.projectService.updateProgress(project).subscribe({
       next: ({ project: saved }) => {
-        const normalized = this.normalizeProject(saved);
+        const normalized = this.normalizeProject({ ...saved, image: project.image });
         this.projects = this.projects.map((item) => item.id === saved.id ? normalized : item)
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
         if (this.selectedProject?.id === saved.id) this.selectedProject = normalized;
@@ -1174,6 +1359,10 @@ export class ProjectDashboard implements OnInit {
     return {
       ...this.normalizeLibraryYarn(projectYarn),
       gauge: projectYarn.gauge ?? { stitches: 10, rows: 10 },
+      needUnknown: projectYarn.needUnknown ?? projectYarn.plannedSkeins == null,
+      plannedSkeins: projectYarn.plannedSkeins ?? null,
+      swatchWeightKnown: projectYarn.swatchWeightKnown ?? projectYarn.swatchWeightGrams != null,
+      swatchWeightGrams: projectYarn.swatchWeightGrams ?? null,
     };
   }
 
@@ -1225,5 +1414,18 @@ export class ProjectDashboard implements OnInit {
 
   private createId(): string {
     return crypto.randomUUID();
+  }
+
+  private nextDuplicateProjectName(name: string): string {
+    const numberedName = name.trim().match(/^(.*) \((\d+)\)$/);
+    const baseName = (numberedName?.[1] ?? name).trim();
+    const takenNames = new Set(this.projects.map((project) => project.name.trim().toLocaleLowerCase()));
+    let number = 2;
+    while (true) {
+      const suffix = ` (${number})`;
+      const candidate = `${baseName.slice(0, 100 - suffix.length).trimEnd()}${suffix}`;
+      if (!takenNames.has(candidate.toLocaleLowerCase())) return candidate;
+      number += 1;
+    }
   }
 }

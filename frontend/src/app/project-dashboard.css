@@ -593,11 +593,63 @@
 .instruction-mode-choice {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
   margin: 12px 0;
 }
 
-.instruction-mode-choice .library-option {
+.instruction-mode-option {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  gap: 11px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #eadde5;
+  border-radius: 12px;
+  background: #fff;
+  color: #716372;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.instruction-mode-option:hover {
+  border-color: #c9adc0;
+  background: #fdf9fc;
+}
+
+.instruction-mode-option.selected {
+  border-color: #aa83a0;
+  background: #f8f1f6;
+  box-shadow: inset 0 0 0 1px #aa83a0;
+}
+
+.instruction-mode-option input {
+  flex: 0 0 auto;
+  accent-color: #89647f;
+}
+
+.instruction-mode-option > span {
+  display: grid;
+  gap: 3px;
+}
+
+.instruction-mode-option strong {
+  color: #604c5e;
+  font-size: 11px;
+}
+
+.instruction-mode-option small {
+  color: #8b7d88;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.instruction-mode-option:focus-within {
+  outline: 2px solid #9d6e90;
+  outline-offset: 2px;
+}
+
+.instruction-mode-choice .instruction-mode-option {
   margin: 0;
 }
 
@@ -708,11 +760,38 @@
   background: #fbf6f8;
 }
 
-.gauge-card > strong {
+.project-yarn-need-settings {
+  display: grid;
   grid-column: 1 / -1;
-  color: #6a5667;
-  font-size: 10px;
+  gap: 8px;
+  padding-top: 9px;
+  border-top: 1px solid #eee3e9;
 }
+
+.project-yarn-need-settings > label:not(.library-option) {
+  display: grid;
+  gap: 5px;
+  color: #827780;
+  font-size: 9px;
+}
+
+.project-yarn-need-settings input:not([type='checkbox']) {
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid #e8dde3;
+  border-radius: 8px;
+  background: #fff;
+  color: #49404a;
+  font: inherit;
+  font-size: 11px;
+}
+
+.project-yarn-need-settings small {
+  color: #897d83;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 
 .gauge-card label {
   display: flex;

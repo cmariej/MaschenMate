@@ -120,18 +120,23 @@
             <div class="progress-track"><span [style.width.%]="progressPercent(project)"></span></div>
           </div>
         } @else if (currentSection; as section) {
-          <label class="section-picker current-section-picker">Aktueller Abschnitt
-            <select [name]="'dashboard-section-' + project.id" [(ngModel)]="project.progress.activeSectionId" (ngModelChange)="cancelCurrentRowEdit(); selectSection(project)" [disabled]="busyProjectId === project.id">
+          <details class="section-picker section-choice-menu" #sectionChooser>
+            <summary class="section-choice-summary">
+              <span>Abschnitt</span><strong>{{ section.name }}</strong><small>{{ sectionPercent(project, section) }}%</small>
+            </summary>
+            <div class="section-choice-list" role="group" aria-label="Aktuellen Abschnitt auswählen">
               @for (projectSection of trackingSections(project); track projectSection.id) {
-                <option [ngValue]="projectSection.id">{{ projectSection.name }} · {{ sectionPercent(project, projectSection) }}%</option>
+                <button class="section-choice" type="button" [class.active]="project.progress.activeSectionId === projectSection.id" [attr.aria-pressed]="project.progress.activeSectionId === projectSection.id" [disabled]="busyProjectId === project.id" (click)="setCurrentSection(project, projectSection.id); sectionChooser.open = false">
+                  <span>{{ projectSection.name }}</span><strong>{{ sectionPercent(project, projectSection) }}%</strong>
+                </button>
               }
-            </select>
-          </label>
+            </div>
+          </details>
           @if (editingCurrentRow) {
             <form class="row-counter row-counter-edit" novalidate (ngSubmit)="saveCurrentRowNumber(project)">
               <label class="row-number-edit">
                 <span class="row-number-label">Nächste Reihennummer</span>
-                <input name="current-row-number" type="number" inputmode="numeric" min="1" [max]="sectionRows(section).length + 1" step="1" required [(ngModel)]="currentRowInput" (ngModelChange)="currentRowInputError = ''" [disabled]="busyProjectId === project.id" aria-describedby="row-number-help row-number-error" />
+                <input #currentRowNumberInput name="current-row-number" type="number" inputmode="numeric" min="1" [max]="sectionRows(section).length + 1" step="1" required [(ngModel)]="currentRowInput" (ngModelChange)="currentRowInputError = ''" [disabled]="busyProjectId === project.id" aria-describedby="row-number-help row-number-error" />
               </label>
               <button class="row-counter-action" type="submit" [disabled]="busyProjectId === project.id">Übernehmen</button>
               <button class="row-counter-action secondary-row-action" type="button" (click)="cancelCurrentRowEdit()">Abbrechen</button>
@@ -288,6 +293,7 @@
   <app-project-detail
     [project]="project"
     [category]="categoryName(project.category)"
+    [isCurrentProject]="currentProject?.id === project.id"
     [progress]="progressPercent(project)"
     [completed]="projectCompleted(project)"
     [busy]="busyProjectId === project.id"
@@ -300,6 +306,7 @@
     (edit)="editProject(project)"
     (back)="closeDetails()"
     (start)="startProject(project)"
+    (makeCurrent)="makeCurrentProject(project)"
     (sectionChange)="selectSection(project)"
     (completeRow)="completeNextRow(project)"
     (completeSection)="completeCurrentSection(project)"
@@ -324,6 +331,7 @@
     [categories]="categories"
     [needleKinds]="needleKinds"
     [editing]="editingId !== null"
+    [projects]="projects"
     [saving]="saving"
     [editorError]="editorError"
     (back)="closeEditor()"
@@ -338,5 +346,9 @@
     (addRange)="addRange($event)"
     (addRepeat)="addRepeat($event)"
     (addSection)="addSection()"
+    (duplicateSection)="duplicateSection($event)"
+    (duplicatePdfSection)="duplicatePdfSection($event)"
+    (duplicateEntry)="duplicateEntry($event.sectionIndex, $event.entryIndex)"
+    (duplicateProject)="duplicateProject($event)"
   />
 }

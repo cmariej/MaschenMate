@@ -1,9 +1,9 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from './auth.js';
 import { projectStore } from '../storage.js';
 import { activityStore } from '../storage.js';
-import type { ProjectInput } from '../project-store.js';
+import { DuplicateProjectNameError, type ProjectInput } from '../project-store.js';
 import type { ActivityType } from '../activity-store.js';
 
 const idSchema = z.string().min(1).max(80);
@@ -49,7 +49,17 @@ const projectYarnSchema = z.object({
     percentage: z.number().positive().max(100),
   })).max(20),
   gauge: gaugeSchema,
+  needUnknown: z.boolean().default(true),
+  plannedSkeins: z.number().int().positive().max(500).nullable().default(null),
+  swatchWeightKnown: z.boolean().default(false),
+  swatchWeightGrams: z.number().positive().max(1000).nullable().default(null),
 }).superRefine((yarn, context) => {
+  if (!yarn.needUnknown && yarn.plannedSkeins === null) {
+    context.addIssue({ code: 'custom', path: ['plannedSkeins'], message: 'Bitte gib den bekannten Knäuelbedarf an oder markiere ihn als unbekannt.' });
+  }
+  if (yarn.swatchWeightKnown && yarn.swatchWeightGrams === null) {
+    context.addIssue({ code: 'custom', path: ['swatchWeightGrams'], message: 'Bitte gib den Verbrauch deiner Maschenprobe an oder wähle „Nein“.' });
+  }
   const total = yarn.composition.reduce((sum, item) => sum + item.percentage, 0);
   if (yarn.composition.length > 0 && Math.round(total * 100) / 100 !== 100) {
     context.addIssue({ code: 'custom', path: ['composition'], message: 'Die Materialanteile müssen zusammen genau 100 % ergeben.' });
@@ -279,6 +289,43 @@ router.get('/:projectId/instruction-pdf', async (req, res, next) => {
   }
 });
 
+router.put('/:projectId/instruction-pdf', express.raw({ type: 'application/pdf', limit: '5mb' }), async (req, res, next) => {
+  try {
+    const userId = res.locals.authUser.id as string;
+    const project = await projectStore.find(userId, req.params.projectId);
+    if (!project) {
+      res.status(404).json({ message: 'Projekt nicht gefunden.' });
+      return;
+    }
+    if (project.instructionMode !== 'pdf') {
+      res.status(409).json({ message: 'Dieses Projekt verwendet keine PDF-Anleitung.' });
+      return;
+    }
+    if (!Buffer.isBuffer(req.body) || req.body.subarray(0, 5).toString('ascii') !== '%PDF-') {
+      res.status(400).json({ message: 'Die ausgewählte Datei ist keine gültige PDF-Datei.' });
+      return;
+    }
+    const name = z.string().trim().min(1).max(255).safeParse(req.query.name);
+    if (!name.success) {
+      res.status(400).json({ message: 'Der Dateiname der PDF-Anleitung ist ungültig.' });
+      return;
+    }
+
+    const updated = await projectStore.update(userId, project.id, {
+      ...project,
+      instructionPdf: `data:application/pdf;base64,${req.body.toString('base64')}`,
+      instructionPdfName: name.data,
+    });
+    if (!updated) {
+      res.status(404).json({ message: 'Projekt nicht gefunden.' });
+      return;
+    }
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/', async (req, res, next) => {
   const parsed = projectInputSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -288,10 +335,6 @@ router.post('/', async (req, res, next) => {
   }
   try {
     const userId = res.locals.authUser.id as string;
-    if (parsed.data.instructionMode === 'pdf' && !parsed.data.instructionPdf) {
-      res.status(400).json({ message: 'Bitte lade die PDF-Anleitung hoch.' });
-      return;
-    }
     const input = parsed.data as ProjectInput;
     if (input.instructionMode === 'manual') {
       input.instructionPdf = null;
@@ -303,6 +346,10 @@ router.post('/', async (req, res, next) => {
     }
     res.status(201).json({ project: { ...project, instructionPdf: null } });
   } catch (error) {
+    if (error instanceof DuplicateProjectNameError) {
+      res.status(409).json({ message: error.message });
+      return;
+    }
     next(error);
   }
 });
@@ -320,6 +367,7 @@ router.put('/:projectId', async (req, res, next) => {
     const submittedProgress = req.body?.progress;
     const body = {
       ...req.body,
+      image: req.body?.image !== undefined ? req.body.image : previous.image,
       pdfSections: req.body?.pdfSections ?? previous.pdfSections ?? [],
       progress: {
         ...previous.progress,
@@ -342,12 +390,11 @@ router.put('/:projectId', async (req, res, next) => {
 
     const input = parsed.data as ProjectInput;
     if (input.instructionMode === 'pdf') {
+      if (typeof req.body?.instructionPdf !== 'string') {
+        input.instructionPdfName = previous.instructionPdfName ?? input.instructionPdfName;
+      }
       input.instructionPdf ??= previous.instructionPdf;
       input.instructionPdfName ??= previous.instructionPdfName;
-      if (!input.instructionPdf) {
-        res.status(400).json({ message: 'Bitte lade die PDF-Anleitung hoch.' });
-        return;
-      }
     } else {
       input.instructionPdf = null;
       input.instructionPdfName = null;
@@ -378,8 +425,12 @@ router.put('/:projectId', async (req, res, next) => {
     if (!isProjectComplete(previous) && isProjectComplete(project)) {
       await recordActivity(userId, project, 'finished', completionEventKey(project, project.id, 'finished'));
     }
-    res.json({ project: { ...project, instructionPdf: null } });
+    res.json({ project: { ...project, image: req.body?.image !== undefined ? project.image : null, instructionPdf: null } });
   } catch (error) {
+    if (error instanceof DuplicateProjectNameError) {
+      res.status(409).json({ message: error.message });
+      return;
+    }
     next(error);
   }
 });
