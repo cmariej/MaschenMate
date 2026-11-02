@@ -111,7 +111,7 @@ export const projectInputSchema = z.object({
     .regex(/^data:application\/pdf;base64,[A-Za-z0-9+/]+={0,2}$/)
     .refine((pdf) => {
       const bytes = Buffer.from(pdf.slice(pdf.indexOf(',') + 1), 'base64');
-      return bytes.length <= 5 * 1024 * 1024 && bytes.subarray(0, 5).toString('ascii') === '%PDF-';
+      return bytes.length <= 5 * 1024 * 1024 && bytes.subarray(0, 1024).includes(Buffer.from('%PDF-'));
     })
     .nullable()
     .default(null),
@@ -309,7 +309,7 @@ router.put('/:projectId/instruction-pdf', express.raw({ type: 'application/pdf',
       res.status(409).json({ message: 'Dieses Projekt verwendet keine PDF-Anleitung.' });
       return;
     }
-    if (!Buffer.isBuffer(req.body) || req.body.subarray(0, 5).toString('ascii') !== '%PDF-') {
+    if (!Buffer.isBuffer(req.body) || !req.body.subarray(0, 1024).includes(Buffer.from('%PDF-'))) {
       res.status(400).json({ message: 'Die ausgewählte Datei ist keine gültige PDF-Datei.' });
       return;
     }
@@ -344,6 +344,10 @@ router.post('/', async (req, res, next) => {
   try {
     const userId = res.locals.authUser.id as string;
     const input = parsed.data as ProjectInput;
+    if (input.instructionMode === 'pdf' && (!input.instructionPdf || !input.instructionPdfName)) {
+      res.status(400).json({ message: 'Bitte lade eine gültige PDF-Anleitung hoch.' });
+      return;
+    }
     if (input.instructionMode === 'manual') {
       input.instructionPdf = null;
       input.instructionPdfName = null;
@@ -407,6 +411,10 @@ router.put('/:projectId', async (req, res, next) => {
       }
       input.instructionPdf ??= previous.instructionPdf;
       input.instructionPdfName ??= previous.instructionPdfName;
+      if (!input.instructionPdf || !input.instructionPdfName) {
+        res.status(400).json({ message: 'Bitte lade eine gültige PDF-Anleitung hoch.' });
+        return;
+      }
     } else {
       input.instructionPdf = null;
       input.instructionPdfName = null;

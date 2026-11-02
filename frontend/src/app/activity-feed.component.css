@@ -135,7 +135,11 @@
   border: 1px solid #f1e9ed;
   border-radius: 11px;
   background: rgb(255 255 255 / 74%);
+  color: inherit;
+  text-decoration: none;
 }
+.feed-project-template { cursor: pointer; }
+.feed-project-template:hover { border-color: #c9aabd; background: #faf5f8; }
 
 .feed-project-highlight {
   border-color: #ead9aa;

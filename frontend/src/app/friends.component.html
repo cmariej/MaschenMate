@@ -41,6 +41,9 @@
     }
   </section>
 
+  @if (loading) {
+    <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Freundesliste wird geladen …</div>
+  } @else {
   <div class="friends-columns">
     <section class="friends-card">
       <h2>Erhaltene Anfragen <span class="count">{{ incoming.length }}</span></h2>
@@ -97,7 +100,5 @@
     </section>
   </div>
 
-  @if (loading) {
-    <p class="loading-state" role="status">Freundesliste wird geladen …</p>
   }
 </section>

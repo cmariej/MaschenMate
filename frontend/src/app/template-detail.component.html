@@ -1,16 +1,16 @@
 <section class="template-detail" aria-labelledby="template-detail-title">
   <header class="template-detail-heading">
-    <button class="back-navigation-button" type="button" (click)="back()" aria-label="Zurück zu den Vorlagen" title="Zurück zu den Vorlagen"><app-fa-icon [icon]="faArrowLeft" /></button>
+    <button class="back-navigation-button" type="button" (click)="back()" [attr.aria-label]="returnToFeed ? 'Zurück zum Feed' : 'Zurück zu den Vorlagen'" [title]="returnToFeed ? 'Zurück zum Feed' : 'Zurück zu den Vorlagen'"><app-fa-icon [icon]="faArrowLeft" /></button>
     <div><span class="template-eyebrow">Vorlage</span><h1 id="template-detail-title">{{ template?.name || 'Vorlage' }}</h1></div>
     @if (template?.shared) { <span class="template-detail-shared" [class.friend-template-icon]="!template?.isOwner" [title]="template?.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'" [attr.aria-label]="template?.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'"><app-fa-icon [icon]="template?.isOwner ? faShareNodes : faUser" /></span> }
   </header>
 
   @if (loading) {
-    <p class="template-detail-message">Vorlage wird geladen …</p>
+    <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Vorlage wird geladen …</div>
   } @else if (error) {
     <p class="template-detail-error" role="alert">{{ error }}</p>
   } @else if (template; as item) {
-    @if (item.image) { <img class="template-detail-image" [src]="item.image" [alt]="'Bild für ' + item.name" /> }
+    @if (item.image) { <img class="template-detail-image" [src]="item.image" [alt]="'Bild für ' + item.name" /> } @else { <div class="template-detail-image image-placeholder" aria-label="Kein Vorlagenbild vorhanden">{{ item.type === 'knitting' ? '🧶' : '🌼' }}</div> }
     <section class="template-detail-card">
       <h2>Projektangaben</h2>
       <dl class="template-detail-facts">
@@ -19,7 +19,7 @@
         @if (item.size) { <div><dt>Größe</dt><dd>{{ item.size }}</dd></div> }
         <div><dt>Gespeichert von</dt><dd>{{ item.creatorUsername }}</dd></div>
         @if (item.designer) { <div><dt>Design</dt><dd>{{ item.designer }}</dd></div> }
-        @if (item.websiteUrl) { <div><dt>Webseite</dt><dd><a [href]="item.websiteUrl" target="_blank" rel="noopener noreferrer">Webseite öffnen ↗</a></dd></div> }
+        @if (item.websiteUrl) { <div><dt>Webseite</dt><dd><a class="website-link" [href]="item.websiteUrl" target="_blank" rel="noopener noreferrer">Webseite öffnen <span aria-hidden="true">↗</span></a></dd></div> }
         @if (item.patternYarn) { <div><dt>Garnmenge laut Anleitung</dt><dd>{{ item.patternYarn.amount }} {{ item.patternYarn.unit }}</dd></div> }
       </dl>
     </section>

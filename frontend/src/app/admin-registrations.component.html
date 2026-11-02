@@ -15,7 +15,7 @@
     <p class="feedback success" role="status">{{ message }}</p>
   }
   @if (loading) {
-    <p class="empty-state">Anfragen werden geladen …</p>
+    <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Anfragen werden geladen …</div>
   } @else if (registrations.length) {
     <ul class="registration-list">
       @for (user of registrations; track user.id) {

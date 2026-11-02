@@ -5,6 +5,7 @@ const schema = new Schema<ProjectTemplate>({
   id: { type: String, required: true, unique: true },
   userId: { type: String, required: true, index: true },
   shared: { type: Boolean, default: false },
+  sharedAt: { type: String, default: null },
   sharingRestricted: { type: Boolean, default: false },
   materialRefsLocal: { type: Boolean, default: false },
   name: { type: String, required: true },
@@ -33,18 +34,20 @@ export class MongoTemplateStore implements TemplateStore {
   async list(userId: string): Promise<TemplateSummary[]> {
     const items = await TemplateModel.aggregate<TemplateSummary>([
       { $match: { userId } },
-      { $project: { _id: 0, id: 1, name: 1, size: { $ifNull: ['$size', ''] }, designer: { $ifNull: ['$designer', ''] }, shared: { $ifNull: ['$shared', false] }, type: 1, category: 1, instructionMode: 1, createdAt: 1, hasImage: { $ne: [{ $ifNull: ['$image', null] }, null] } } },
+      { $project: { _id: 0, id: 1, name: 1, size: { $ifNull: ['$size', ''] }, designer: { $ifNull: ['$designer', ''] }, shared: { $ifNull: ['$shared', false] }, sharedAt: 1, type: 1, category: 1, instructionMode: 1, createdAt: 1, hasImage: { $ne: [{ $ifNull: ['$image', null] }, null] } } },
     ]);
     return items;
   }
   async listShared(userIds: string[]): Promise<(TemplateSummary & { userId: string })[]> {
     return TemplateModel.aggregate<TemplateSummary & { userId: string }>([
       { $match: { userId: { $in: userIds }, shared: true } },
-      { $project: { _id: 0, id: 1, userId: 1, name: 1, size: { $ifNull: ['$size', ''] }, designer: { $ifNull: ['$designer', ''] }, shared: 1, type: 1, category: 1, instructionMode: 1, createdAt: 1, hasImage: { $ne: [{ $ifNull: ['$image', null] }, null] } } },
+      { $project: { _id: 0, id: 1, userId: 1, name: 1, size: { $ifNull: ['$size', ''] }, designer: { $ifNull: ['$designer', ''] }, shared: 1, sharedAt: 1, type: 1, category: 1, instructionMode: 1, createdAt: 1, hasImage: { $ne: [{ $ifNull: ['$image', null] }, null] } } },
     ]);
   }
   async findShared(id: string, userIds: string[]): Promise<ProjectTemplate | null> { const item = await TemplateModel.findOne({ id, userId: { $in: userIds }, shared: true }).select('-_id').lean(); return item ? structuredClone(item) : null; }
-  async setShared(userId: string, id: string, shared: boolean): Promise<boolean> { return (await TemplateModel.updateOne({ userId, id }, { $set: { shared } })).matchedCount > 0; }
+  async setShared(userId: string, id: string, shared: boolean): Promise<boolean> {
+    return (await TemplateModel.updateOne({ userId, id }, [{ $set: { shared, sharedAt: shared ? { $cond: [{ $and: ['$shared', { $ne: [{ $ifNull: ['$sharedAt', null] }, null] }] }, '$sharedAt', new Date().toISOString()] } : null } }])).matchedCount > 0;
+  }
   async find(userId: string, id: string): Promise<ProjectTemplate | null> { const item = await TemplateModel.findOne({ userId, id }).select('-_id').lean(); return item ? structuredClone(item) : null; }
   async findImage(userId: string, id: string): Promise<string | null> { const item = await TemplateModel.findOne({ userId, id }).select('image -_id').lean(); return item?.image ?? null; }
   async create(template: ProjectTemplate): Promise<ProjectTemplate> { await TemplateModel.create(template); return structuredClone(template); }

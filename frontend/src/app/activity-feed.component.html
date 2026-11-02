@@ -9,11 +9,11 @@
     <p class="notice error-notice" role="alert">{{ error }}</p>
   }
   @if (loading && !activities.length) {
-    <p class="feed-empty">Aktivitäten werden geladen …</p>
+    <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Aktivitäten werden geladen …</div>
   } @else if (activities.length) {
     <div class="feed-list">
       @for (activity of activities; track activity.id) {
-        <article class="feed-item" [class.feed-item-finished]="activity.type === 'finished'">
+        <article class="feed-item" [attr.data-feed-activity-id]="activity.id" [class.feed-item-finished]="activity.type === 'finished'">
           <div class="feed-actor">
             <img class="feed-actor-avatar"
               [src]="activity.actor.profileImage || '/avatar-placeholder.svg'"
@@ -27,8 +27,10 @@
             </div>
             <time [attr.datetime]="activity.createdAt">{{ activityTime(activity.createdAt) }}</time>
           </div>
-          <div class="feed-project" [class.feed-project-highlight]="activity.type === 'finished'">
-            @if (activity.projectImage) {
+          <a class="feed-project" [class.feed-project-highlight]="activity.type === 'finished'" [class.feed-project-template]="activity.type === 'template_shared'" [routerLink]="activity.type === 'template_shared' ? ['/templates', activity.projectId] : null" [state]="{ templateReturnPath: '/dashboard', feedActivityId: activity.id }">
+            @if (activity.type === 'template_shared' && activity.templateHasImage) {
+              <img class="feed-project-image" [src]="projectService.templateImageUrl(activity.projectId)" alt="" />
+            } @else if (activity.projectImage) {
               <img class="feed-project-image" [src]="activity.projectImage" [alt]="'Bild für ' + activity.projectName" />
             } @else {
               <div class="feed-project-placeholder" aria-hidden="true">🧶</div>
@@ -45,7 +47,7 @@
                 }
               </div>
             </div>
-          </div>
+          </a>
         </article>
       }
     </div>

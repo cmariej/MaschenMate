@@ -14,7 +14,8 @@
       </button>
     </header>
     @if (error) { <p class="notice error-notice" role="alert">{{ error }}</p> }
-    @if (page === 'yarns') {
+    @if (materialsLoading) { <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Materialien werden geladen …</div> }
+    @else if (page === 'yarns') {
       <details class="yarn-filters">
         <summary class="disclosure-summary yarn-filter-heading">
           <strong>Garne filtern</strong>
@@ -101,7 +102,7 @@
         </div></fieldset>
       </div>
     </details>
-    @if (templatesLoading) { <div class="empty-state">Vorlagen werden geladen …</div> }
+    @if (templatesLoading) { <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Vorlagen werden geladen …</div> }
     @else if (!filteredTemplates.length) {
       <div class="empty-state"><p>{{ templates.length ? 'Keine Vorlagen passen zu diesen Filtern.' : 'Noch keine Vorlagen gespeichert. Speichere ein Projekt in den Projektdetails als Vorlage.' }}</p></div>
     } @else {
@@ -116,7 +117,7 @@
               <span class="template-open-info"><strong>{{ template.name }}@if (template.shared) { <span class="template-shared-icon" [class.friend-template-icon]="!template.isOwner" [attr.aria-label]="template.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'" [title]="template.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'"><app-fa-icon [icon]="template.isOwner ? faShareNodes : faUser" /></span> }</strong><span>{{ template.type === 'knitting' ? 'Stricken' : 'Häkeln' }} · {{ categoryName(template.category) }}@if (template.size) { · Größe {{ template.size }} }</span><span>Gespeichert von {{ template.creatorUsername }}@if (template.designer) { · Design: {{ template.designer }} }</span></span>
             </button>
             @if (template.isOwner && templateDeleteId === template.id) {
-              <div class="template-card-actions"><span>Vorlage löschen?</span><button class="remove-button" type="button" (click)="deleteTemplate(template.id)">Löschen</button><button class="secondary-button" type="button" (click)="templateDeleteId = null">Abbrechen</button></div>
+              <div class="template-card-actions confirmation-box" role="alert"><strong>Vorlage wirklich löschen?</strong><div class="confirmation-actions"><button class="confirmation-cancel" type="button" (click)="templateDeleteId = null">Abbrechen</button><button class="confirmation-delete" type="button" (click)="deleteTemplate(template.id)">Vorlage löschen</button></div></div>
             } @else if (template.isOwner) {
               <button class="template-delete-button" type="button" (click)="templateDeleteId = template.id" [attr.aria-label]="'Vorlage ' + template.name + ' löschen'" title="Vorlage löschen"><app-fa-icon [icon]="faTrashCan" /></button>
             }
@@ -146,6 +147,8 @@
       <app-registration-banner />
     }
   }
+
+  @if (page === 'home' && loading) { <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Projekt wird geladen …</div> }
 
   @if (page === 'home' && currentProject; as project) {
     <section class="active-overview">
@@ -195,10 +198,9 @@
             </div>
           }
           <p class="row-caption">
-            @if (currentProjectNextRow; as row) {
-              Aktuell Reihe {{ row.number }}
-              @if (project.instructionMode !== 'pdf') { · {{ row.instructions }} }
-            } @else { Abschnitt abgeschlossen }
+            @if (followingProjectRow; as row) {
+              {{ project.instructionMode === 'pdf' ? 'Reihe ' + row.number : 'Reihe ' + row.number + ': ' + row.instructions }}
+            } @else if (currentProjectNextRow) { Keine weitere Reihe in diesem Abschnitt } @else { Abschnitt abgeschlossen }
           </p>
           <div class="current-progress-metrics">
             <span>Projekt <strong>{{ progressPercent(project) }}%</strong></span>
@@ -268,7 +270,7 @@
     }
 
     @if (loading) {
-      <div class="empty-state">Projekte werden geladen …</div>
+      <div class="loading-indicator" role="status"><span class="loading-spinner" aria-hidden="true"></span>Projekte werden geladen …</div>
     } @else if (!projectsToShow.length) {
       @if (!projects.length) {
       <div class="empty-state">
@@ -384,6 +386,8 @@
     [instructionOnly]="instructionOnlyEditor"
     [saving]="saving"
     [processingImage]="processingProjectImage"
+    [processingPdf]="processingInstructionPdf"
+    [pdfError]="instructionPdfError"
     [editorError]="editorError"
     (back)="closeEditor()"
     (save)="saveProject()"

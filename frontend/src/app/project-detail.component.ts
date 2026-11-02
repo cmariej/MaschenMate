@@ -37,7 +37,7 @@ interface YarnUsage {
           <button class="secondary-button icon-action-button" type="button" (click)="edit.emit()" aria-label="Projekt bearbeiten" title="Projekt bearbeiten"><app-fa-icon [icon]="faPen" /></button>
         </div>
       </header>
-      @if (project.image) { <img class="detail-project-image" [src]="project.image" [alt]="'Bild für ' + project.name" /> }
+      @if (project.image) { <img class="detail-project-image" [src]="project.image" [alt]="'Bild für ' + project.name" /> } @else { <div class="detail-project-image image-placeholder" aria-label="Kein Projektbild vorhanden">{{ project.type === 'knitting' ? '🧶' : '🌼' }}</div> }
       <div class="detail-content">
         @if (project.progress.cancelledAt || (!project.progress.startedAt && !completed)) {
         <section class="detail-block progress-card" aria-labelledby="progress-title">
@@ -133,7 +133,7 @@ interface YarnUsage {
               <div><dt>Kategorie</dt><dd>{{ category }}</dd></div>
               <div><dt>Größe</dt><dd>{{ project.size || 'Nicht angegeben' }}</dd></div>
               @if (project.designer) { <div><dt>Design</dt><dd>{{ project.designer }}</dd></div> }
-              @if (project.websiteUrl) { <div><dt>Webseite</dt><dd><a [href]="project.websiteUrl" target="_blank" rel="noopener noreferrer">Webseite öffnen ↗</a></dd></div> }
+              @if (project.websiteUrl) { <div><dt>Webseite</dt><dd><a class="website-link" [href]="project.websiteUrl" target="_blank" rel="noopener noreferrer">Webseite öffnen <span aria-hidden="true">↗</span></a></dd></div> }
             </dl>
             <div class="project-information-materials">
               <h3>Garne</h3>
@@ -271,7 +271,7 @@ interface YarnUsage {
           </details>
         }
         @if (deletePending) {
-          <div class="delete-confirm"><span>Projekt wirklich löschen?</span><button type="button" (click)="remove.emit()">Ja, löschen</button><button type="button" (click)="deletePending = false">Abbrechen</button></div>
+          <div class="confirmation-box" role="alert"><strong>Projekt wirklich löschen?</strong><div class="confirmation-actions"><button class="confirmation-cancel" type="button" (click)="deletePending = false">Abbrechen</button><button class="confirmation-delete" type="button" (click)="remove.emit()">Projekt löschen</button></div></div>
         } @else {
           <button class="delete-link" type="button" (click)="deletePending = true">Projekt löschen</button>
         }

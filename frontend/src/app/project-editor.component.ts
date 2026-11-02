@@ -146,11 +146,11 @@ import {
           <h3>Anleitung</h3>
           <div class="instruction-mode-choice" role="radiogroup" aria-label="Anleitungsformat">
             <label class="instruction-mode-option" [class.selected]="draft.instructionMode === 'manual'">
-              <input type="radio" name="instructionMode" value="manual" [(ngModel)]="draft.instructionMode" />
+              <input type="radio" name="instructionMode" value="manual" [(ngModel)]="draft.instructionMode" [disabled]="processingPdf" />
               <span><strong>Manuell eingeben</strong><small>Reihen und Abschnitte selbst erfassen</small></span>
             </label>
             <label class="instruction-mode-option" [class.selected]="draft.instructionMode === 'pdf'">
-              <input type="radio" name="instructionMode" value="pdf" [(ngModel)]="draft.instructionMode" />
+              <input type="radio" name="instructionMode" value="pdf" [(ngModel)]="draft.instructionMode" [disabled]="processingPdf" />
               <span><strong>PDF hochladen</strong><small>Vorhandene Anleitung als Datei nutzen</small></span>
             </label>
           </div>
@@ -256,11 +256,12 @@ import {
                 <p class="form-hint">Ausgewählte PDF: <strong>{{ draft.instructionPdfName }}</strong></p>
               }
               <label class="file-picker">PDF auswählen
-                <input type="file" accept="application/pdf,.pdf" (change)="instructionPdfSelected.emit($event)" />
+                <input type="file" accept="application/pdf,.pdf" [disabled]="processingPdf" (change)="instructionPdfSelected.emit($event)" />
               </label>
               <small>PDF-Datei, maximal 5 MB. Die PDF wird beim Projekt gespeichert.</small>
+              @if (processingPdf) { <small role="status">PDF wird geprüft …</small> }
               @if (draft.instructionPdfName) {
-                <button class="text-button" type="button" (click)="removeInstructionPdf()">PDF entfernen</button>
+                <button class="text-button" type="button" [disabled]="processingPdf" (click)="removeInstructionPdf()">PDF entfernen</button>
               }
               @if (!draft.instructionPdf && !draft.instructionPdfName) {
                 <p class="form-hint">Lade eine PDF-Datei hoch, um die manuelle Eingabe zu ersetzen.</p>
@@ -301,7 +302,7 @@ import {
         }
         <footer class="editor-actions">
           <button class="secondary-button" type="button" [disabled]="saving" (click)="back.emit()">Abbrechen</button>
-          <button class="primary-button" type="submit" [disabled]="saving || processingImage || projectForm.invalid">
+          <button class="primary-button" type="submit" [disabled]="saving || processingImage || processingPdf || (draft.instructionMode === 'pdf' && !!pdfError) || projectForm.invalid">
             {{ saving ? 'Wird gespeichert …' : instructionOnly ? 'Anleitung speichern' : editing ? 'Änderungen speichern' : 'Projekt anlegen' }}
           </button>
         </footer>
@@ -366,6 +367,8 @@ export class ProjectEditorComponent {
   @Input() instructionOnly = false;
   @Input() saving = false;
   @Input() processingImage = false;
+  @Input() processingPdf = false;
+  @Input() pdfError = '';
   @Input() editorError = '';
   @Output() back = new EventEmitter<void>();
   @Output() save = new EventEmitter<void>();

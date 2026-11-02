@@ -38,6 +38,8 @@ export class TemplateDetailComponent implements OnInit {
   protected shareError = '';
   protected pdfUrl: string | null = null;
   protected pdfPreview: SafeResourceUrl | null = null;
+  protected readonly returnToFeed = history.state?.templateReturnPath === '/dashboard';
+  private readonly feedActivityId = typeof history.state?.feedActivityId === 'string' ? history.state.feedActivityId : '';
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('templateId');
@@ -56,7 +58,10 @@ export class TemplateDetailComponent implements OnInit {
     });
   }
 
-  protected back(): void { void this.router.navigateByUrl('/templates'); }
+  protected back(): void {
+    if (this.returnToFeed) void this.router.navigateByUrl('/dashboard', { state: { feedActivityId: this.feedActivityId } });
+    else void this.router.navigateByUrl('/templates');
+  }
 
   protected openShareDialog(): void {
     this.rightsConfirmed = false;

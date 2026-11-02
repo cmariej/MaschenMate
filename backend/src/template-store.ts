@@ -8,6 +8,7 @@ export interface ProjectTemplate {
   id: string;
   userId: string;
   shared?: boolean;
+  sharedAt?: string | null;
   sharingRestricted?: boolean;
   materialRefsLocal?: boolean;
   name: string;
@@ -30,7 +31,7 @@ export interface ProjectTemplate {
   createdAt: string;
 }
 
-export type TemplateSummary = Pick<ProjectTemplate, 'id' | 'name' | 'size' | 'type' | 'category' | 'instructionMode' | 'createdAt' | 'designer' | 'shared'> & { hasImage: boolean };
+export type TemplateSummary = Pick<ProjectTemplate, 'id' | 'name' | 'size' | 'type' | 'category' | 'instructionMode' | 'createdAt' | 'designer' | 'shared' | 'sharedAt'> & { hasImage: boolean };
 
 export interface TemplateStore {
   initialize(): Promise<void>;
@@ -62,12 +63,12 @@ export class LocalTemplateStore implements TemplateStore {
 
   async list(userId: string): Promise<TemplateSummary[]> {
     await this.initialize();
-    return this.data!.templates.filter((item) => item.userId === userId).map(({ id, name, size, type, category, instructionMode, createdAt, image, designer, shared }) => ({ id, name, size: size ?? '', type, category, instructionMode, createdAt, designer: designer ?? '', shared: !!shared, hasImage: Boolean(image) }));
+    return this.data!.templates.filter((item) => item.userId === userId).map(({ id, name, size, type, category, instructionMode, createdAt, image, designer, shared, sharedAt }) => ({ id, name, size: size ?? '', type, category, instructionMode, createdAt, designer: designer ?? '', shared: !!shared, sharedAt, hasImage: Boolean(image) }));
   }
 
   async listShared(userIds: string[]): Promise<(TemplateSummary & { userId: string })[]> {
     await this.initialize();
-    return this.data!.templates.filter((item) => item.shared && userIds.includes(item.userId)).map(({ id, userId, name, size, type, category, instructionMode, createdAt, image, designer }) => ({ id, userId, name, size: size ?? '', type, category, instructionMode, createdAt, designer: designer ?? '', shared: true, hasImage: Boolean(image) }));
+    return this.data!.templates.filter((item) => item.shared && userIds.includes(item.userId)).map(({ id, userId, name, size, type, category, instructionMode, createdAt, image, designer, sharedAt }) => ({ id, userId, name, size: size ?? '', type, category, instructionMode, createdAt, designer: designer ?? '', shared: true, sharedAt, hasImage: Boolean(image) }));
   }
 
   async findShared(id: string, userIds: string[]): Promise<ProjectTemplate | null> {
@@ -77,7 +78,7 @@ export class LocalTemplateStore implements TemplateStore {
   }
 
   async setShared(userId: string, id: string, shared: boolean): Promise<boolean> {
-    return this.mutate((items) => ({ items: items.map((item) => item.userId === userId && item.id === id ? { ...item, shared } : item), result: items.some((item) => item.userId === userId && item.id === id) }));
+    return this.mutate((items) => ({ items: items.map((item) => item.userId === userId && item.id === id ? { ...item, shared, sharedAt: shared ? (item.shared && item.sharedAt || new Date().toISOString()) : null } : item), result: items.some((item) => item.userId === userId && item.id === id) }));
   }
 
   async find(userId: string, id: string): Promise<ProjectTemplate | null> {

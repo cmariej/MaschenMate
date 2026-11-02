@@ -166,7 +166,7 @@ export interface ProjectTemplate extends TemplateSummary {
   sections: ProjectSection[];
 }
 
-export type FeedActivityType = 'started' | 'section_completed' | 'finished' | 'cancelled';
+export type FeedActivityType = 'started' | 'section_completed' | 'finished' | 'cancelled' | 'template_shared';
 
 export interface FeedActivity {
   id: string;
@@ -174,6 +174,7 @@ export interface FeedActivity {
   projectId: string;
   projectName: string;
   projectImage: string | null;
+  templateHasImage?: boolean;
   projectType: ProjectKind;
   projectCategory: ProjectCategory;
   type: FeedActivityType;

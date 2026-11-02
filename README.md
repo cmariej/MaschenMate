@@ -1,6 +1,12 @@
 TODO:
-- Löschen: Nachfrage design verbessern
+- Löschen: Nachfrage design verbessern (hübschere buttons)
 - Feed ergänzen um, XY hat eine Vorlage geteilt (vorlgaeinfos genau anzeigen wie projektinfos) -> nur das sie anklickbar ist
+- Webseite öffnen Link hübsch machen
+- Datenschutz aktualisieren?
+- In Projektdetails Platzhalter, wenn es kein Bild gibt, bei Vorlagen auch
+- Wenn Daten noch nicht geladen haben, auf der view einen loading spinner anzeigen
+- Anleitung PDF upload schlägt fehl mit keine gültige PDF-Datei obwohl es eine gültige PDf-Datei ist. Außerdem: bei fehler mit der PDF Datei darf Anleitung nicht speicherbar sein
+- im Dahsboard bei der aktuellen Reihe im Text darunter nicht schreiben: Aktuell Reihe 4 · linke Maschen sondern die infos der nächsten Reihe "Reihe 5: rechte Maschen"
 
 
 # MaschenMate

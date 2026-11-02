@@ -64,7 +64,7 @@ export type MaterialViewMode = 'preview' | 'edit';
           </fieldset>
           @if (error) { <p class="notice error-notice" role="alert">{{ error }}</p> }
           @if (deletePending) {
-            <p class="delete-confirmation" role="alert">Dieses Garn wirklich löschen? <button class="delete-link" type="button" [disabled]="saving" (click)="remove.emit()">Garn löschen</button><button class="secondary-button" type="button" [disabled]="saving" (click)="deletePending = false">Abbrechen</button></p>
+            <div class="confirmation-box" role="alert"><strong>Dieses Garn wirklich löschen?</strong><div class="confirmation-actions"><button class="confirmation-cancel" type="button" [disabled]="saving" (click)="deletePending = false">Abbrechen</button><button class="confirmation-delete" type="button" [disabled]="saving" (click)="remove.emit()">Garn löschen</button></div></div>
           }
           <footer class="editor-actions">
             @if (!isNew && !deletePending) { <button class="delete-link" type="button" [disabled]="saving" (click)="deletePending = true">Garn löschen</button> }

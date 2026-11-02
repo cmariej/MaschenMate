@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, DestroyRef, ElementRef, Injector, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { faBookOpen, faFolderOpen, faHouse, faMinus, faPlus, faTrashCan, faShareNodes, faUser } from '@fortawesome/free-solid-svg-icons';
 import { NavigationEnd, Router } from '@angular/router';
@@ -57,6 +57,8 @@ export class ProjectDashboard implements OnInit {
   protected readonly faProjectsTab = faFolderOpen;
 
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly injector = inject(Injector);
+  private pendingFeedActivityId = typeof history.state?.feedActivityId === 'string' ? history.state.feedActivityId : '';
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectService = inject(ProjectService);
   private readonly progressSectionCache = new WeakMap<Project, ProjectSection[]>();
@@ -89,6 +91,9 @@ export class ProjectDashboard implements OnInit {
   protected readonly duplicationMessage = signal('');
   private duplicationMessageTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingInstructionPdf: File | null = null;
+  protected processingInstructionPdf = false;
+  protected instructionPdfError = '';
+  private instructionPdfRequest = 0;
   protected busyProjectId = '';
   protected editingId: string | null = null;
   protected instructionOnlyEditor = false;
@@ -287,6 +292,12 @@ export class ProjectDashboard implements OnInit {
     return project ? this.currentRow(project) : null;
   }
 
+  protected get followingProjectRow(): ExpandedRow | null {
+    const section = this.currentSection;
+    if (!section || !this.currentProjectNextRow) return null;
+    return this.sectionRows(section).find((row) => row.number === this.currentRowNumber + 1) ?? null;
+  }
+
   protected get filteredYarns(): Yarn[] {
     return this.materials.yarns.filter((yarn) =>
       (!this.yarnNeedleSizeFilters.length || this.yarnNeedleSizeFilters.includes(yarn.needleSize))
@@ -347,6 +358,9 @@ export class ProjectDashboard implements OnInit {
     if (segments[0] === 'projects' && segments[1] === 'new') {
       this.editingId = null;
       this.pendingInstructionPdf = null;
+      this.instructionPdfError = '';
+      this.instructionPdfRequest++;
+      this.processingInstructionPdf = false;
       this.draft = this.newProject();
       this.editorError = '';
       this.view = 'project-edit';
@@ -498,6 +512,9 @@ export class ProjectDashboard implements OnInit {
     const { id, userId, createdAt, updatedAt, patternYarn, ...input } = structuredClone(project);
     this.editingId = id;
     this.pendingInstructionPdf = null;
+    this.instructionPdfError = '';
+    this.instructionPdfRequest++;
+    this.processingInstructionPdf = false;
     const projectYarns = input.yarns.map((yarn) => this.normalizeProjectYarn(yarn));
     this.draft = {
       ...input,
@@ -966,38 +983,48 @@ export class ProjectDashboard implements OnInit {
     if (!file) return;
 
     this.editorError = '';
-    if (file.type !== 'application/pdf') {
-      this.editorError = 'Bitte wähle eine PDF-Datei aus.';
-      input.value = '';
-      return;
-    }
+    this.instructionPdfError = '';
+    const request = ++this.instructionPdfRequest;
+    const draft = this.draft;
+    this.pendingInstructionPdf = null;
     if (file.size > 5 * 1024 * 1024) {
-      this.editorError = 'Die PDF-Anleitung darf höchstens 5 MB groß sein.';
+      this.instructionPdfError = this.editorError = 'Die PDF-Anleitung darf höchstens 5 MB groß sein.';
       input.value = '';
       return;
     }
 
-    this.draft.instructionMode = 'pdf';
-    void file.slice(0, 5).arrayBuffer().then((header) => {
-      if (new TextDecoder().decode(header) !== '%PDF-') {
-        this.editorError = 'Die ausgewählte Datei ist keine gültige PDF-Datei.';
-      } else {
+    this.processingInstructionPdf = true;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (request !== this.instructionPdfRequest || this.draft !== draft) return;
+      try {
+        if (typeof reader.result !== 'string' || !reader.result.includes(',')) throw new Error('Die PDF-Datei konnte nicht gelesen werden.');
+        const encoded = reader.result.slice(reader.result.indexOf(',') + 1);
+        if (!atob(encoded.slice(0, 1368)).slice(0, 1024).includes('%PDF-')) throw new Error('Die ausgewählte Datei ist keine gültige PDF-Datei.');
         this.pendingInstructionPdf = file;
-        this.draft.instructionPdf = null;
-        this.draft.instructionPdfName = file.name;
-        this.draft.instructionMode = 'pdf';
+        draft.instructionPdf = `data:application/pdf;base64,${encoded}`;
+        draft.instructionPdfName = file.name;
+        draft.instructionMode = 'pdf';
+      } catch (error) {
+        this.instructionPdfError = this.editorError = error instanceof Error && error.message ? error.message : 'Die PDF-Datei konnte nicht gelesen werden.';
+      } finally {
+        this.processingInstructionPdf = false;
+        input.value = '';
+        this.changeDetector.markForCheck();
       }
+    };
+    reader.onerror = reader.onabort = () => {
+      if (request !== this.instructionPdfRequest || this.draft !== draft) return;
+      this.instructionPdfError = this.editorError = 'Die PDF-Datei konnte nicht gelesen werden.';
+      this.processingInstructionPdf = false;
       input.value = '';
       this.changeDetector.markForCheck();
-    }).catch(() => {
-      this.editorError = 'Die PDF-Datei konnte nicht gelesen werden.';
-      input.value = '';
-      this.changeDetector.markForCheck();
-    });
+    };
+    reader.readAsDataURL(file);
   }
 
   protected saveProject(): void {
-    if (this.processingProjectImage) return;
+    if (this.processingProjectImage || this.processingInstructionPdf || (this.draft.instructionMode === 'pdf' && this.instructionPdfError)) return;
     this.editorError = '';
     if (!this.draft.instructionPdfName || this.draft.instructionMode !== 'pdf') this.pendingInstructionPdf = null;
     this.draft.progress ??= { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] };
@@ -1017,7 +1044,6 @@ export class ProjectDashboard implements OnInit {
 
     // Fill optional legacy fields so requests always have the complete shape
     // expected by the API, even when editing an older project.
-    const pdfToUpload = this.draft.instructionMode === 'pdf' ? this.pendingInstructionPdf : null;
     this.saving = true;
     const request = this.editingId
       ? this.projectService.update(this.editingId, this.draft)
@@ -1028,21 +1054,6 @@ export class ProjectDashboard implements OnInit {
         this.projects = [saved, ...this.projects.filter((item) => item.id !== project.id)]
           .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
         this.editingId = saved.id;
-        if (pdfToUpload) {
-          this.projectService.uploadInstructionPdf(saved.id, pdfToUpload).subscribe({
-            next: () => {
-              const uploaded = { ...saved, instructionPdfName: pdfToUpload.name };
-              this.projects = this.projects.map((item) => item.id === uploaded.id ? uploaded : item);
-              this.finishProjectSave(uploaded);
-            },
-            error: (error: Error) => {
-              this.editorError = `Projekt gespeichert, aber PDF-Upload fehlgeschlagen: ${error.message}`;
-              this.saving = false;
-              this.changeDetector.markForCheck();
-            },
-          });
-          return;
-        }
         this.finishProjectSave(saved);
       },
       error: (error: Error) => {
@@ -1098,7 +1109,7 @@ export class ProjectDashboard implements OnInit {
     if (project.gauge && (!this.isPositiveFinite(project.gauge.pattern.stitches, 1000) || !this.isPositiveFinite(project.gauge.pattern.rows, 1000) || !this.isPositiveFinite(project.gauge.personal.stitches, 1000) || !this.isPositiveFinite(project.gauge.personal.rows, 1000))) return 'Bitte prüfe die Maschenprobe.';
 
     if (this.instructionOnlyEditor && project.instructionMode === 'pdf') {
-      if ((!project.instructionPdf && !this.editingId && !this.pendingInstructionPdf) || (project.instructionPdf && !project.instructionPdf.startsWith('data:application/pdf;base64,JVBERi0'))) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
+      if (!project.instructionPdf && !project.instructionPdfName) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
       if (!project.instructionPdfName?.trim() || project.instructionPdfName.length > 255) return 'Der Dateiname der PDF-Anleitung ist ungültig.';
       const pdfSectionIds = new Set<string>();
       for (const section of project.pdfSections) {
@@ -1291,6 +1302,14 @@ export class ProjectDashboard implements OnInit {
         this.feedLoading = false;
         this.feedError = '';
         this.changeDetector.markForCheck();
+        const activityId = this.pendingFeedActivityId;
+        this.pendingFeedActivityId = '';
+        if (activityId) afterNextRender(() => {
+          requestAnimationFrame(() => {
+            const item = Array.from(document.querySelectorAll<HTMLElement>('[data-feed-activity-id]')).find((element) => element.dataset['feedActivityId'] === activityId);
+            item?.scrollIntoView({ block: 'center' });
+          });
+        }, { injector: this.injector });
       },
       error: (error: Error) => {
         this.feedError = error.message;

@@ -23,7 +23,7 @@ import { MaterialViewMode } from './yarn.component';
           <label class="field">Größe (mm)<input name="needleSize" type="number" min="0.1" step="0.1" [(ngModel)]="needle.size" required /></label>
           @if (error) { <p class="notice error-notice" role="alert">{{ error }}</p> }
           @if (deletePending) {
-            <p class="delete-confirmation" role="alert">Diese Nadel wirklich löschen? <button class="delete-link" type="button" [disabled]="saving" (click)="remove.emit()">Nadel löschen</button><button class="secondary-button" type="button" [disabled]="saving" (click)="deletePending = false">Abbrechen</button></p>
+            <div class="confirmation-box" role="alert"><strong>Diese Nadel wirklich löschen?</strong><div class="confirmation-actions"><button class="confirmation-cancel" type="button" [disabled]="saving" (click)="deletePending = false">Abbrechen</button><button class="confirmation-delete" type="button" [disabled]="saving" (click)="remove.emit()">Nadel löschen</button></div></div>
           }
           <footer class="editor-actions">
             @if (!isNew && !deletePending) { <button class="delete-link" type="button" [disabled]="saving" (click)="deletePending = true">Nadel löschen</button> }

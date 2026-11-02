@@ -2,15 +2,19 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FeedActivity } from './project.service';
 import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
+import { RouterLink } from '@angular/router';
+import { inject } from '@angular/core';
+import { ProjectService } from './project.service';
 
 @Component({
-  imports: [FontAwesomeIconComponent],
+  imports: [FontAwesomeIconComponent, RouterLink],
   selector: 'app-activity-feed',
   styleUrl: './activity-feed.component.css',
   templateUrl: './activity-feed.component.html',
 })
 export class ActivityFeedComponent {
   protected readonly faArrowsRotate = faArrowsRotate;
+  protected readonly projectService = inject(ProjectService);
   @Input() activities: FeedActivity[] = [];
   @Input() loading = false;
   @Input() error = '';
@@ -20,6 +24,8 @@ export class ActivityFeedComponent {
   protected message(activity: FeedActivity): string {
     const verb = activity.actor.id === this.currentUserId ? 'hast' : 'hat';
     switch (activity.type) {
+      case 'template_shared':
+        return `${verb} eine Vorlage geteilt`;
       case 'started':
         return `${verb} ein neues Projekt gestartet`;
       case 'section_completed':
