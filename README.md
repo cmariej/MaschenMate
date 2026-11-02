@@ -50,6 +50,12 @@ Neue Registrierungen bleiben bis zur Freigabe durch den Admin `clara` gesperrt. 
    Frontend: <http://localhost:4200>  
    API-Status: <http://localhost:3000/api/health>
 
+## Auf dem iPhone installieren
+
+Die veröffentlichte Web-App ist als PWA vorbereitet. Öffne `https://maschenmate.clara-jung.de` in Safari, tippe auf **Teilen** und wähle **Zum Home-Bildschirm**. Beim Start über das neue Icon wird MaschenMate im eigenständigen App-Modus geöffnet. Für die Installation und den Service Worker muss die Seite über HTTPS erreichbar sein; `localhost` ist für lokale Entwicklung ausgenommen.
+
+Nach dem ersten erfolgreichen Laden kann der Service Worker die App-Oberfläche (HTML, JavaScript, CSS, Manifest und Icons) offline bereitstellen. Konto-, Projekt- und API-Daten werden nicht im Service Worker zwischengespeichert und benötigen weiterhin eine Verbindung. Neue App-Versionen werden beim nächsten Besuch erkannt und aktualisiert.
+
 ## Nützliche Befehle
 
 ```sh
