@@ -64,10 +64,10 @@ export type MaterialViewMode = 'preview' | 'edit';
           </fieldset>
           @if (error) { <p class="notice error-notice" role="alert">{{ error }}</p> }
           @if (deletePending) {
-            <p class="delete-confirmation" role="alert">Dieses Garn wirklich löschen? <button class="delete-link" type="button" (click)="remove.emit()">Garn löschen</button><button class="secondary-button" type="button" (click)="deletePending = false">Abbrechen</button></p>
+            <p class="delete-confirmation" role="alert">Dieses Garn wirklich löschen? <button class="delete-link" type="button" [disabled]="saving" (click)="remove.emit()">Garn löschen</button><button class="secondary-button" type="button" [disabled]="saving" (click)="deletePending = false">Abbrechen</button></p>
           }
           <footer class="editor-actions">
-            @if (!isNew) { <button class="delete-link" type="button" (click)="deletePending = true">Garn löschen</button> }
+            @if (!isNew && !deletePending) { <button class="delete-link" type="button" [disabled]="saving" (click)="deletePending = true">Garn löschen</button> }
             <button class="secondary-button" type="button" (click)="back.emit()">Abbrechen</button>
             <button class="primary-button" type="submit" [disabled]="yarnForm.invalid || saving || !compositionValid">{{ saving ? 'Wird gespeichert …' : 'Speichern' }}</button>
           </footer>

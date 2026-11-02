@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AdminService, PendingRegistration } from './admin.service';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
+import { compareNames } from './name-sort';
 
 @Component({
   imports: [FontAwesomeIconComponent],
@@ -30,7 +31,7 @@ export class AdminRegistrationsComponent implements OnInit {
     this.loading = true;
     this.adminService.listRegistrations().subscribe({
       next: ({ registrations }) => {
-        this.registrations = registrations;
+        this.registrations = registrations.sort((left, right) => compareNames(left.name, right.name) || compareNames(left.username, right.username));
         this.loading = false;
         this.error = '';
         this.changeDetector.markForCheck();

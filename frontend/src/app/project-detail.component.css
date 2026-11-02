@@ -68,8 +68,10 @@
 }
 
 .detail-project-image {
+  display: block;
   width: 100%;
   max-height: 280px;
+  margin-bottom: 16px;
   border-radius: 12px;
   object-fit: cover;
 }
@@ -123,6 +125,11 @@
 .progress-heading::after {
   grid-column: 3;
   grid-row: 1;
+}
+
+.progress-heading-static {
+  grid-template-columns: minmax(0, 1fr) auto;
+  cursor: default;
 }
 
 .progress-eyebrow {
@@ -343,9 +350,13 @@
 .progress-empty-state {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.progress-empty-state .start-project-button {
+  margin-top: 12px;
 }
 
 .pdf-progress-controls {
@@ -458,6 +469,8 @@
 .pdf-instruction-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
 }

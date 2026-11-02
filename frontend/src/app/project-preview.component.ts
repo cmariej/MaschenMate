@@ -20,6 +20,7 @@ import { Project } from './project.service';
       <span class="card-content">
         <span class="title-line"><strong>{{ project.name }}</strong><span aria-hidden="true">→</span></span>
         <span class="meta">
+          @if (project.size) { <span>Größe {{ project.size }}</span> }
           <span>{{ project.sections.length }} {{ project.sections.length === 1 ? 'Abschnitt' : 'Abschnitte' }}</span>
           <span>Bearbeitet {{ editedAt }}</span>
         </span>

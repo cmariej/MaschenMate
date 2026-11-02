@@ -478,7 +478,7 @@ main.shell > .account-panel.legal-app {
   left: 0;
   display: grid;
   width: min(100%, 1160px);
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin: 0 auto;
   padding: 7px 12px max(8px, env(safe-area-inset-bottom));
   border: 1px solid rgb(238 225 231 / 20%);
@@ -1371,6 +1371,147 @@ details[open] > .disclosure-summary::after {
   margin-top: 28px;
 }
 
+.template-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.template-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.template-card,
+.template-picker {
+  padding: 16px;
+  border: 1px solid #eadde5;
+  border-radius: 12px;
+  background: #fffdfd;
+}
+.template-shared-icon { display: inline-block; margin-left: 7px; color: #96718e; font-size: 16px; vertical-align: middle; }
+.template-shared-icon.friend-template-icon { color: #4d8171; }
+
+.template-card h3 {
+  margin: 0 0 6px;
+  color: #563c50;
+  font: 400 20px / 1.3 Georgia, 'Times New Roman', serif;
+  overflow-wrap: anywhere;
+}
+
+.template-open-button {
+  display: grid;
+  grid-template-columns: minmax(48px, 20%) minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  gap: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #756773;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template-cover { display: grid; width: 100%; aspect-ratio: 1; place-items: center; overflow: hidden; border-radius: 9px; background: #f7eef2; font-size: 24px; }
+.template-cover img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.template-open-info { display: grid; min-width: 0; gap: 6px; }
+.template-open-info > strong { color: #563c50; font: 400 20px / 1.3 Georgia, 'Times New Roman', serif; overflow-wrap: anywhere; }
+.template-open-button:focus-visible { outline: 3px solid #b98eaa; outline-offset: 4px; border-radius: 4px; }
+
+.template-card p,
+.template-card small,
+.template-picker p,
+.template-save-form p {
+  color: #756773;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.template-card p { margin: 0 0 4px; }
+.template-card-actions,
+.template-save-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.template-card-actions { grid-column: 1 / -1; justify-content: flex-end; }
+.template-delete-button {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #efdadb;
+  border-radius: 10px;
+  background: #fff9f9;
+  color: #a3444d;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.template-delete-button:hover { border-color: #d9aeb1; background: #fff2f2; }
+.template-delete-button:focus-visible { outline: 3px solid #d9aeb1; outline-offset: 2px; }
+.template-picker { display: grid; gap: 8px; margin: 0 0 16px; background: #fbf6f9; }
+.template-picker .field { margin: 0; }
+.template-picker > button { justify-self: start; }
+.template-save-form { display: grid; gap: 10px; }
+.project-template-control { display: flex; justify-content: flex-end; margin: 16px 0; }
+.project-information-content { padding: 14px; }
+.project-information-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; }
+.project-information-grid > div, .project-information-material { min-width: 0; padding: 10px 11px; border: 1px solid #eee1e7; border-radius: 9px; background: #fff; }
+.project-information-grid dt { color: #897d83; font-size: 12px; line-height: 1.4; }
+.project-information-grid dd { margin: 4px 0 0; color: #594958; font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.project-information-materials h3 { margin: 16px 0 8px; color: #594958; font-size: 14px; }
+.project-information-materials p { margin: 0; color: #897d83; font-size: 13px; }
+.project-information-material { display: grid; gap: 4px; margin-top: 7px; color: #756773; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.project-information-material strong { color: #594958; font-size: 14px; }
+.restart-confirm { margin-top: 14px; padding: 12px; border: 1px solid #e8d8e2; border-radius: 10px; background: #fff; }
+.restart-confirm p, .project-action-error { margin: 0; color: #756773; font-size: 13px; line-height: 1.5; }
+.restart-confirm > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+.project-action-error { margin-top: 12px; color: #a3443c; }
+.project-information-materials { margin-bottom: 12px; }
+.detail-title-group .project-size { display: block; margin-top: 5px; color: #756773; font-size: 13px; line-height: 1.4; }
+.template-save-form h4, .template-save-form p { margin: 0; }
+.template-save-form label { display: grid; gap: 5px; font-size: 13px; }
+.template-save-form input { width: 100%; min-height: 44px; padding: 9px 10px; border: 1px solid #e8dde3; border-radius: 8px; font: inherit; font-size: 16px; }
+.template-save-form .template-error { color: #a3443c; }
+.template-save-form .template-success { color: #386c43; }
+.template-save-button { min-height: 40px; padding: 8px 12px; border: 1px solid #e5d7e0; border-radius: 10px; background: #fff; color: #765d70; font: 600 13px / 1.4 Arial, sans-serif; cursor: pointer; }
+.template-save-button:disabled { opacity: .6; cursor: not-allowed; }
+
+.template-dialog-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(39 31 37 / 48%);
+}
+
+.template-dialog {
+  width: min(100%, 440px);
+  padding: 24px;
+  border: 1px solid #eadde5;
+  border-radius: 18px;
+  background: #fffdfa;
+  box-shadow: 0 20px 70px rgb(30 22 35 / 24%);
+}
+
+.template-dialog h2 { margin: 0; color: #563c50; font: 400 22px / 1.3 Georgia, 'Times New Roman', serif; }
+.template-dialog p { color: #756773; font-size: 14px; line-height: 1.5; }
+.template-dialog label { display: grid; gap: 6px; color: #624c5e; font-size: 14px; }
+.template-dialog input { width: 100%; min-height: 44px; padding: 9px 10px; border: 1px solid #e8dde3; border-radius: 8px; font: inherit; font-size: 16px; }
+.template-dialog .template-share-confirmation { display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.template-dialog .template-share-confirmation input { flex: 0 0 auto; width: 18px; min-height: 18px; height: 18px; margin: 2px 0 0; accent-color: #a67393; }
+.template-dialog .template-error { color: #a3443c; }
+.template-dialog .template-save-actions { justify-content: flex-end; margin-top: 18px; }
+.template-saved-notice { color: #386c43; font-size: 13px; }
+
 .duplication-toast {
   position: fixed;
   z-index: 1000;
@@ -1399,6 +1540,10 @@ details[open] > .disclosure-summary::after {
 
 /* Shared phone typography for the project, instruction and material screens. */
 @media (max-width: 650px) {
+  .project-information-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .account-panel.project-app .material-grid {
     width: 100%;
     grid-template-columns: minmax(0, 1fr);
@@ -1531,6 +1676,25 @@ details[open] > .disclosure-summary::after {
     padding: 10px 12px;
   }
 
+  .account-panel.project-app .detail-page .instructions-heading-actions .template-save-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .account-panel.project-app .detail-page .project-template-control .template-save-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .account-panel.project-app .detail-page .pdf-instruction-heading,
+  .account-panel.project-app .detail-page .pdf-instruction-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-panel.project-app .detail-page .pdf-instruction-actions { margin-left: 0; }
+  .account-panel.project-app .detail-page .pdf-instruction-actions > * { justify-content: center; min-height: 44px; text-align: center; }
+
   .account-panel.project-app .project-card :is(.meta, .badge, .progress-label, .not-started) {
     font-size: 12px;
     line-height: 1.5;
@@ -1554,7 +1718,8 @@ details[open] > .disclosure-summary::after {
   }
 
   .bottom-tabs button {
-    font-size: 11px;
+    min-width: 0;
+    font-size: 10px;
     line-height: 1.3;
   }
 }

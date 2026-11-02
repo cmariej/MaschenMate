@@ -13,7 +13,56 @@ export interface MaterialStore {
   initialize(): Promise<void>;
   get(userId: string): Promise<MaterialLibrary>;
   save(userId: string, materials: MaterialLibrary): Promise<MaterialLibrary>;
+  mergeProjectMaterials(userId: string, yarns: Yarn[], needles: Needle[]): Promise<MaterialIdMappings>;
   deleteAllForUser(userId: string): Promise<void>;
+}
+
+export interface MaterialIdMappings {
+  yarnIds: Map<string, string>;
+  needleIds: Map<string, string>;
+}
+
+export class MaterialLimitError extends Error {
+  constructor() { super('Deine Materialsammlung darf höchstens 100 Garne und 100 Nadeln enthalten. Bitte entferne zuerst nicht benötigte Materialien.'); }
+}
+
+function yarnKey(yarn: Yarn): string {
+  const normalize = (value: string | undefined) => (value ?? '').trim().toLocaleLowerCase('de-DE');
+  return JSON.stringify([
+    normalize(yarn.name), normalize(yarn.brand), normalize(yarn.color), normalize(yarn.colorCode),
+    yarn.needleSize, yarn.length, yarn.weight,
+    (yarn.composition ?? []).map((part) => [normalize(part.material), part.percentage]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+  ]);
+}
+
+export function reconcileProjectMaterials(library: MaterialLibrary, yarns: Yarn[], needles: Needle[]): { materials: MaterialLibrary; mappings: MaterialIdMappings; changed: boolean } {
+  const merged = structuredClone(library);
+  const yarnIds = new Map<string, string>();
+  const needleIds = new Map<string, string>();
+  const claimedYarns = new Set<string>();
+  const claimedNeedles = new Set<string>();
+  const reservedYarns = new Set(yarns.map((yarn) => yarn.id));
+  const reservedNeedles = new Set(needles.map((needle) => needle.id));
+  let changed = false;
+
+  for (const yarn of yarns) {
+    const existing = merged.yarns.find((item) => item.id === yarn.id && yarnKey(item) === yarnKey(yarn))
+      ?? merged.yarns.find((item) => !claimedYarns.has(item.id) && !reservedYarns.has(item.id) && yarnKey(item) === yarnKey(yarn));
+    const target = existing ?? { ...structuredClone(yarn), id: randomUUID() };
+    if (!existing) { merged.yarns.push(target); changed = true; }
+    yarnIds.set(yarn.id, target.id);
+    claimedYarns.add(target.id);
+  }
+  for (const needle of needles) {
+    const existing = merged.needles.find((item) => item.id === needle.id && item.type === needle.type && item.size === needle.size)
+      ?? merged.needles.find((item) => !claimedNeedles.has(item.id) && !reservedNeedles.has(item.id) && item.type === needle.type && item.size === needle.size);
+    const target = existing ?? { ...structuredClone(needle), id: randomUUID() };
+    if (!existing) { merged.needles.push(target); changed = true; }
+    needleIds.set(needle.id, target.id);
+    claimedNeedles.add(target.id);
+  }
+  if (changed && (merged.yarns.length > 100 || merged.needles.length > 100)) throw new MaterialLimitError();
+  return { materials: merged, mappings: { yarnIds, needleIds }, changed };
 }
 
 interface MaterialFile {
@@ -43,6 +92,13 @@ export class LocalMaterialStore implements MaterialStore {
     return this.mutate((data) => {
       const users = { ...data.users, [userId]: structuredClone(materials) };
       return { next: { version: 1, users }, result: structuredClone(materials) };
+    });
+  }
+
+  async mergeProjectMaterials(userId: string, yarns: Yarn[], needles: Needle[]): Promise<MaterialIdMappings> {
+    return this.mutate((data) => {
+      const { materials, mappings, changed } = reconcileProjectMaterials(data.users[userId] ?? { yarns: [], needles: [] }, yarns, needles);
+      return { next: changed ? { version: 1, users: { ...data.users, [userId]: materials } } : data, result: mappings };
     });
   }
 
@@ -91,8 +147,10 @@ export class LocalMaterialStore implements MaterialStore {
     await this.ensureLoaded();
     const queued = this.writeQueue.then(async () => {
       const { next, result } = operation(this.data!);
-      await this.persist(next);
-      this.data = next;
+      if (next !== this.data) {
+        await this.persist(next);
+        this.data = next;
+      }
       return result;
     });
     this.writeQueue = queued.then(() => undefined, () => undefined);

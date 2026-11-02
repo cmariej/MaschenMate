@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import type { Observable } from 'rxjs';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
+import { compareNames } from './name-sort';
 
 interface FriendUser {
   id: string;
@@ -77,7 +78,7 @@ export class FriendsComponent implements OnInit {
       { withCredentials: true },
     ).subscribe({
       next: ({ users }) => {
-        this.results = users;
+        this.results = users.sort((left, right) => compareNames(left.name, right.name) || compareNames(left.username, right.username));
         this.searching = false;
         this.changeDetector.markForCheck();
       },
@@ -126,9 +127,10 @@ export class FriendsComponent implements OnInit {
     if (showLoading) this.loading = true;
     this.http.get<FriendsResponse>(this.apiUrl, { withCredentials: true }).subscribe({
       next: (data) => {
-        this.friends = data.friends;
-        this.incoming = data.incoming;
-        this.outgoing = data.outgoing;
+        const byName = (left: FriendUser, right: FriendUser) => compareNames(left.name, right.name) || compareNames(left.username, right.username);
+        this.friends = data.friends.sort(byName);
+        this.incoming = data.incoming.sort(byName);
+        this.outgoing = data.outgoing.sort(byName);
         this.loading = false;
         this.updateSearchRelationships();
         this.changeDetector.markForCheck();

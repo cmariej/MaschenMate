@@ -6,6 +6,8 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
   { path: 'dashboard', loadComponent: loadDashboard, title: 'Dashboard · MaschenMate' },
   { path: 'projects', loadComponent: loadDashboard, title: 'Projekte · MaschenMate' },
+  { path: 'templates', loadComponent: loadDashboard, title: 'Vorlagen · MaschenMate' },
+  { path: 'templates/:templateId', loadComponent: () => import('./template-detail.component').then((module) => module.TemplateDetailComponent), title: 'Vorlage · MaschenMate' },
   { path: 'projects/new', loadComponent: loadDashboard, title: 'Neues Projekt · MaschenMate' },
   { path: 'projects/:projectId/edit/instructions', loadComponent: loadDashboard, title: 'Anleitung bearbeiten · MaschenMate' },
   { path: 'projects/:projectId/edit', loadComponent: loadDashboard, title: 'Projekt bearbeiten · MaschenMate' },

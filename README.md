@@ -1,3 +1,8 @@
+TODO:
+- Löschen: Nachfrage design verbessern
+- Feed ergänzen um, XY hat eine Vorlage geteilt (vorlgaeinfos genau anzeigen wie projektinfos) -> nur das sie anklickbar ist
+
+
 # MaschenMate
 
 ssh lukara@192.168.188.65

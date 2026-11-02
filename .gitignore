@@ -11,3 +11,5 @@ frontend/dist/
 backend/dist/
 backend/data/users.json
 backend/data/users.*.tmp
+backend/data/project-templates.json
+backend/data/project-templates.*.tmp

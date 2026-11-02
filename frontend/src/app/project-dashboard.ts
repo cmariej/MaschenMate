@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { faFolderOpen, faHouse, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faBookOpen, faFolderOpen, faHouse, faMinus, faPlus, faTrashCan, faShareNodes, faUser } from '@fortawesome/free-solid-svg-icons';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
@@ -11,12 +11,14 @@ import { ProjectDetailComponent } from './project-detail.component';
 import { ProjectEditorComponent } from './project-editor.component';
 import { ActivityFeedComponent } from './activity-feed.component';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
+import { compareNames } from './name-sort';
 import { AuthService } from './auth.service';
 import { RegistrationBannerComponent } from './registration-banner.component';
 import {
   Gauge,
   InstructionRange,
   InstructionRepeat,
+  TemplateSummary,
   Needle,
   NeedleKind,
   MaterialLibrary,
@@ -47,6 +49,10 @@ export class ProjectDashboard implements OnInit {
   @ViewChild('currentRowNumberInput') private currentRowNumberInput?: ElementRef<HTMLInputElement>;
   protected readonly faPlus = faPlus;
   protected readonly faMinus = faMinus;
+  protected readonly faBookOpen = faBookOpen;
+  protected readonly faTrashCan = faTrashCan;
+  protected readonly faShareNodes = faShareNodes;
+  protected readonly faUser = faUser;
   protected readonly faHomeTab = faHouse;
   protected readonly faProjectsTab = faFolderOpen;
 
@@ -70,6 +76,16 @@ export class ProjectDashboard implements OnInit {
   protected currentRowInput: number | null = null;
   protected currentRowInputError = '';
   protected editorError = '';
+  protected templates: TemplateSummary[] = [];
+  protected templatesLoading = false;
+  protected templatesError = '';
+  protected templateSaving = false;
+  protected templateSaved = false;
+  protected templateError = '';
+  protected templateDeleteId: string | null = null;
+  protected templateTypeFilter: 'all' | 'knitting' | 'crochet' = 'all';
+  protected templateOwnerFilter: 'all' | 'own' | 'friends' = 'all';
+  protected templateCategoryFilter: 'all' | ProjectCategory = 'all';
   protected readonly duplicationMessage = signal('');
   private duplicationMessageTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingInstructionPdf: File | null = null;
@@ -77,7 +93,7 @@ export class ProjectDashboard implements OnInit {
   protected editingId: string | null = null;
   protected instructionOnlyEditor = false;
   protected draft: ProjectInput = this.newProject();
-  protected page: 'home' | 'projects' | 'yarns' | 'needles' = 'home';
+  protected page: 'home' | 'projects' | 'templates' | 'yarns' | 'needles' = 'home';
   protected view: 'list' | 'project-detail' | 'project-edit' | 'yarn-edit' | 'needle-edit' = 'list';
   protected projectTypeFilter: 'all' | 'knitting' | 'crochet' = 'all';
   protected projectCategoryFilter: 'all' | ProjectCategory = 'all';
@@ -123,6 +139,7 @@ export class ProjectDashboard implements OnInit {
     this.loadProjects();
     this.loadFeed();
     this.loadMaterials();
+    this.loadTemplates();
   }
 
   protected get authUserId(): string | null {
@@ -137,7 +154,67 @@ export class ProjectDashboard implements OnInit {
     return this.projects.filter((project) =>
       (this.projectTypeFilter === 'all' || project.type === this.projectTypeFilter)
       && (this.projectCategoryFilter === 'all' || project.category === this.projectCategoryFilter),
-    );
+    ).sort((left, right) => compareNames(left.name, right.name));
+  }
+
+  protected get filteredTemplates(): TemplateSummary[] {
+    return this.templates.filter((template) =>
+      (this.templateTypeFilter === 'all' || template.type === this.templateTypeFilter)
+      && (this.templateOwnerFilter === 'all' || template.isOwner === (this.templateOwnerFilter === 'own'))
+      && (this.templateCategoryFilter === 'all' || template.category === this.templateCategoryFilter))
+      .sort((left, right) => compareNames(left.name, right.name));
+  }
+
+  protected get activeTemplateFilterCount(): number {
+    return Number(this.templateTypeFilter !== 'all') + Number(this.templateCategoryFilter !== 'all') + Number(this.templateOwnerFilter !== 'all');
+  }
+
+  protected clearTemplateFilters(): void {
+    this.templateTypeFilter = 'all';
+    this.templateOwnerFilter = 'all';
+    this.templateCategoryFilter = 'all';
+  }
+
+  protected loadTemplates(): void {
+    this.templatesLoading = true;
+    this.templatesError = '';
+    this.projectService.listTemplates().subscribe({
+      next: ({ templates }) => { this.templates = templates.sort((a, b) => b.createdAt.localeCompare(a.createdAt)); this.templatesLoading = false; this.changeDetector.markForCheck(); },
+      error: (error: Error) => { this.templatesError = error.message; this.templatesLoading = false; this.changeDetector.markForCheck(); },
+    });
+  }
+
+  protected saveProjectTemplate(project: Project, name: string): void {
+    if (this.templateSaving) return;
+    this.templateSaving = true;
+    this.templateSaved = false;
+    this.templateError = '';
+    this.projectService.saveTemplate(project.id, name).subscribe({
+      next: ({ template }) => {
+        this.templates = [template, ...this.templates];
+        this.templateSaving = false;
+        this.templateSaved = true;
+        void this.router.navigateByUrl(`/templates/${encodeURIComponent(template.id)}`);
+        this.changeDetector.markForCheck();
+      },
+      error: (error: Error) => { this.templateError = error.message; this.templateSaving = false; this.changeDetector.markForCheck(); },
+    });
+  }
+
+  protected deleteTemplate(id: string): void {
+    this.templatesError = '';
+    this.projectService.deleteTemplate(id).subscribe({
+      next: () => { this.templates = this.templates.filter((template) => template.id !== id); this.templateDeleteId = null; this.changeDetector.markForCheck(); },
+      error: (error: Error) => { this.templatesError = error.message; this.changeDetector.markForCheck(); },
+    });
+  }
+
+  protected openTemplate(id: string): void {
+    void this.router.navigateByUrl(`/templates/${encodeURIComponent(id)}`);
+  }
+
+  protected templateImageUrl(id: string): string {
+    return this.projectService.templateImageUrl(id);
   }
 
   protected get activeProjectFilterCount(): number {
@@ -215,7 +292,12 @@ export class ProjectDashboard implements OnInit {
       (!this.yarnNeedleSizeFilters.length || this.yarnNeedleSizeFilters.includes(yarn.needleSize))
       && (!this.yarnColorFilters.length || this.yarnColorFilters.includes(yarn.color))
       && (!this.yarnMaterialFilters.length || yarn.composition.some((item) => this.yarnMaterialFilters.includes(item.material))),
-    );
+    ).sort((left, right) => compareNames(left.name, right.name) || compareNames(left.brand, right.brand) || compareNames(left.color, right.color));
+  }
+
+  protected get sortedNeedles(): Needle[] {
+    return [...this.materials.needles].sort((left, right) =>
+      compareNames(this.needleKindName(left.type), this.needleKindName(right.type)) || left.size - right.size);
   }
 
   protected get yarnFilterNeedleSizes(): number[] {
@@ -240,6 +322,8 @@ export class ProjectDashboard implements OnInit {
     const segments = path.split('/');
     this.page = segments[0] === 'projects'
       ? 'projects'
+      : segments[0] === 'templates'
+        ? 'templates'
       : segments[0] === 'yarns'
         ? 'yarns'
         : segments[0] === 'needles'
@@ -321,7 +405,7 @@ export class ProjectDashboard implements OnInit {
     this.changeDetector.markForCheck();
   }
 
-  private pagePath(page: 'home' | 'projects' | 'yarns' | 'needles'): string {
+  private pagePath(page: 'home' | 'projects' | 'templates' | 'yarns' | 'needles'): string {
     return page === 'home' ? '/dashboard' : `/${page}`;
   }
 
@@ -371,7 +455,7 @@ export class ProjectDashboard implements OnInit {
     });
   }
 
-  protected showPage(page: 'home' | 'projects' | 'yarns' | 'needles'): void {
+  protected showPage(page: 'home' | 'projects' | 'templates' | 'yarns' | 'needles'): void {
     if (page === 'home' && this.returnToEditorPath) {
       const returnPath = this.returnToEditorPath;
       this.returnToEditorPath = '';
@@ -415,12 +499,11 @@ export class ProjectDashboard implements OnInit {
     this.editingId = id;
     this.pendingInstructionPdf = null;
     const projectYarns = input.yarns.map((yarn) => this.normalizeProjectYarn(yarn));
-    const projectNeedles = input.needles.map((needle) => this.materials.needles.find((libraryNeedle) => libraryNeedle.id === needle.id) ?? needle);
     this.draft = {
       ...input,
       category: input.category ?? 'other',
       yarns: projectYarns,
-      needles: projectNeedles,
+      needles: input.needles,
       patternYarn,
     };
     this.editorError = '';
@@ -440,18 +523,20 @@ export class ProjectDashboard implements OnInit {
     void this.router.navigateByUrl('/needles/new');
   }
 
-  protected removeLibraryYarn(index: number): void {
-    const yarn = this.materials.yarns[index];
-    if (!yarn) return;
-    this.saveMaterialLibrary({ ...this.materials, yarns: this.materials.yarns.filter((item) => item.id !== yarn.id) }, () => {
+  protected removeLibraryYarn(id: string): void {
+    if (this.materialsSaving) return;
+    if (!this.materials.yarns.some((item) => item.id === id)) { this.error = 'Dieses Garn wurde nicht gefunden.'; return; }
+    this.saveMaterialLibrary({ ...this.materials, yarns: this.materials.yarns.filter((item) => item.id !== id) }, () => {
+      this.yarnDraft = null;
       void this.router.navigateByUrl('/yarns');
     });
   }
 
-  protected removeLibraryNeedle(index: number): void {
-    const needle = this.materials.needles[index];
-    if (!needle) return;
-    this.saveMaterialLibrary({ ...this.materials, needles: this.materials.needles.filter((item) => item.id !== needle.id) }, () => {
+  protected removeLibraryNeedle(id: string): void {
+    if (this.materialsSaving) return;
+    if (!this.materials.needles.some((item) => item.id === id)) { this.error = 'Diese Nadel wurde nicht gefunden.'; return; }
+    this.saveMaterialLibrary({ ...this.materials, needles: this.materials.needles.filter((item) => item.id !== id) }, () => {
+      this.needleDraft = null;
       void this.router.navigateByUrl('/needles');
     });
   }
@@ -531,6 +616,8 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected openProjectDetail(project: Project): void {
+    this.templateSaved = false;
+    this.templateError = '';
     const projectReturnPath = this.page === 'home' ? '/dashboard' : '/projects';
     void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}`, { state: { projectReturnPath } });
   }
@@ -662,9 +749,8 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected toggleProjectYarn(yarn: Yarn, checked: boolean): void {
-    const selected = this.draft.yarns.some((item) => item.id === yarn.id);
-    if (checked && !selected) this.draft.yarns.push(this.normalizeProjectYarn(yarn));
-    if (!checked && selected) this.draft.yarns = this.draft.yarns.filter((item) => item.id !== yarn.id);
+    if (checked) this.draft.yarns.push(this.normalizeProjectYarn({ ...yarn, id: this.createId() }));
+    else this.draft.yarns = this.draft.yarns.filter((item) => item.id !== yarn.id);
     const defaultYarnId = this.draft.yarns[0]?.id;
     for (const section of this.draft.sections) {
       for (const entry of section.entries) {
@@ -684,9 +770,8 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected toggleProjectNeedle(needle: Needle, checked: boolean): void {
-    const selected = this.draft.needles.some((item) => item.id === needle.id);
-    if (checked && !selected) this.draft.needles.push(structuredClone(needle));
-    if (!checked && selected) this.draft.needles = this.draft.needles.filter((item) => item.id !== needle.id);
+    if (checked) this.draft.needles.push({ ...structuredClone(needle), id: this.createId() });
+    else this.draft.needles = this.draft.needles.filter((item) => item.id !== needle.id);
     for (const section of this.draft.sections) {
       if (section.needleId === needle.id && !checked) section.needleId = undefined;
     }
@@ -774,44 +859,6 @@ export class ProjectDashboard implements OnInit {
       this.duplicationMessage.set('');
       this.duplicationMessageTimer = null;
     }, 2000);
-  }
-
-  protected duplicateProject(projectId: string): void {
-    const source = this.projects.find((project) => project.id === projectId);
-    if (!source) return;
-    const normalized = this.normalizeProject(source);
-    const { id, userId, createdAt, updatedAt, ...input } = structuredClone(normalized);
-    this.editingId = null;
-    this.pendingInstructionPdf = null;
-    this.draft = {
-      ...input,
-      name: this.nextDuplicateProjectName(source.name),
-      sections: input.sections.map((section) => ({
-        ...section,
-        id: this.createId(),
-        entries: section.entries.map((entry) => ({ ...entry, id: this.createId() })),
-      })),
-      pdfSections: input.pdfSections.map((section) => ({ ...section, id: this.createId() })),
-      instructionPdf: null,
-      progress: { startedAt: null, activeSectionId: null, pdfProgress: 0, completedRows: {}, changelog: [] },
-    };
-    this.editorError = '';
-    this.saving = false;
-    if (source.instructionMode === 'pdf' && source.instructionPdfName) {
-      this.saving = true;
-      this.projectService.downloadInstructionPdf(source.id).subscribe({
-        next: (blob) => {
-          this.pendingInstructionPdf = new File([blob], source.instructionPdfName ?? 'Anleitung.pdf', { type: 'application/pdf' });
-          this.saving = false;
-          this.changeDetector.markForCheck();
-        },
-        error: (error: Error) => {
-          this.editorError = `Die PDF-Vorlage konnte nicht kopiert werden. Bitte lade sie erneut hoch: ${error.message}`;
-          this.saving = false;
-          this.changeDetector.markForCheck();
-        },
-      });
-    }
   }
 
   protected removeSection(index: number): void {
@@ -1016,9 +1063,16 @@ export class ProjectDashboard implements OnInit {
   private validateProjectDraft(): string | null {
     const project = this.draft;
     if (!project.name?.trim() || project.name.trim().length > 100) return 'Bitte gib einen Projektnamen mit höchstens 100 Zeichen ein.';
+    if ((project.size ?? '').trim().length > 50) return 'Die Größe darf höchstens 50 Zeichen lang sein.';
+    if ((project.designer ?? '').trim().length > 100) return 'Der Name des Designers darf höchstens 100 Zeichen lang sein.';
+    const websiteUrl = (project.websiteUrl ?? '').trim();
+    if (websiteUrl) {
+      try { if (websiteUrl.length > 2048 || !['http:', 'https:'].includes(new URL(websiteUrl).protocol)) throw new Error(); }
+      catch { return 'Bitte gib eine gültige Webseite mit http:// oder https:// ein.'; }
+    }
     const normalizedProjectName = project.name.trim().toLocaleLowerCase();
     if (this.projects.some((item) => item.id !== this.editingId && item.name.trim().toLocaleLowerCase() === normalizedProjectName)) return 'Ein Projekt mit diesem Namen existiert bereits. Bitte wähle einen eindeutigen Namen.';
-    if (!['knitting', 'crochet'].includes(project.type)) return 'Bitte wähle eine gültige Projektart aus.';
+    if (!['knitting', 'crochet'].includes(project.type)) return 'Bitte wähle eine gültige Art aus.';
     if (!this.categories.some((category) => category.value === project.category)) return 'Bitte wähle eine gültige Kategorie aus.';
     if (project.yarns.length > 30 || project.needles.length > 30 || project.sections.length > 50 || project.pdfSections.length > 50) return 'Das Projekt enthält mehr Materialien oder Abschnitte als erlaubt.';
     if (project.image && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(project.image)) return 'Das Projektbild hat ein ungültiges Format. Bitte wähle es erneut aus.';
@@ -1208,6 +1262,24 @@ export class ProjectDashboard implements OnInit {
         this.error = error.message;
         this.changeDetector.markForCheck();
       },
+    });
+  }
+
+  protected restartProject(project: Project): void {
+    if (this.busyProjectId || !project.progress.cancelledAt) return;
+    this.error = '';
+    this.busyProjectId = project.id;
+    this.projectService.restart(project.id).subscribe({
+      next: ({ project: saved }) => {
+        const normalized = this.normalizeProject(saved);
+        this.projects = this.projects.map((item) => item.id === saved.id ? normalized : item)
+          .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+        if (this.selectedProject?.id === saved.id) this.selectedProject = normalized;
+        this.busyProjectId = '';
+        this.loadFeed();
+        this.changeDetector.markForCheck();
+      },
+      error: (error: Error) => { this.busyProjectId = ''; this.error = error.message; this.changeDetector.markForCheck(); },
     });
   }
 
@@ -1410,6 +1482,9 @@ export class ProjectDashboard implements OnInit {
     return {
       ...normalized,
       category: legacy.category ?? 'other',
+      size: legacy.size ?? '',
+      designer: legacy.designer ?? '',
+      websiteUrl: legacy.websiteUrl ?? '',
       instructionMode: legacy.instructionMode ?? 'manual',
       instructionPdf: legacy.instructionPdf ?? null,
       instructionPdfName: legacy.instructionPdfName ?? null,
@@ -1434,6 +1509,9 @@ export class ProjectDashboard implements OnInit {
       type: 'knitting',
       category: 'sweater',
       name: '',
+      size: '',
+      designer: '',
+      websiteUrl: '',
       image: null,
       gauge: undefined,
       patternYarn: null,
@@ -1452,16 +1530,4 @@ export class ProjectDashboard implements OnInit {
     return crypto.randomUUID();
   }
 
-  private nextDuplicateProjectName(name: string): string {
-    const numberedName = name.trim().match(/^(.*) \((\d+)\)$/);
-    const baseName = (numberedName?.[1] ?? name).trim();
-    const takenNames = new Set(this.projects.map((project) => project.name.trim().toLocaleLowerCase()));
-    let number = 2;
-    while (true) {
-      const suffix = ` (${number})`;
-      const candidate = `${baseName.slice(0, 100 - suffix.length).trimEnd()}${suffix}`;
-      if (!takenNames.has(candidate.toLocaleLowerCase())) return candidate;
-      number += 1;
-    }
-  }
 }

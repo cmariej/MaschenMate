@@ -1,0 +1,113 @@
+<section class="template-detail" aria-labelledby="template-detail-title">
+  <header class="template-detail-heading">
+    <button class="back-navigation-button" type="button" (click)="back()" aria-label="Zurück zu den Vorlagen" title="Zurück zu den Vorlagen"><app-fa-icon [icon]="faArrowLeft" /></button>
+    <div><span class="template-eyebrow">Vorlage</span><h1 id="template-detail-title">{{ template?.name || 'Vorlage' }}</h1></div>
+    @if (template?.shared) { <span class="template-detail-shared" [class.friend-template-icon]="!template?.isOwner" [title]="template?.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'" [attr.aria-label]="template?.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'"><app-fa-icon [icon]="template?.isOwner ? faShareNodes : faUser" /></span> }
+  </header>
+
+  @if (loading) {
+    <p class="template-detail-message">Vorlage wird geladen …</p>
+  } @else if (error) {
+    <p class="template-detail-error" role="alert">{{ error }}</p>
+  } @else if (template; as item) {
+    @if (item.image) { <img class="template-detail-image" [src]="item.image" [alt]="'Bild für ' + item.name" /> }
+    <section class="template-detail-card">
+      <h2>Projektangaben</h2>
+      <dl class="template-detail-facts">
+        <div><dt>Art</dt><dd>{{ item.type === 'knitting' ? 'Stricken' : 'Häkeln' }}</dd></div>
+        <div><dt>Kategorie</dt><dd>{{ categoryName(item.category) }}</dd></div>
+        @if (item.size) { <div><dt>Größe</dt><dd>{{ item.size }}</dd></div> }
+        <div><dt>Gespeichert von</dt><dd>{{ item.creatorUsername }}</dd></div>
+        @if (item.designer) { <div><dt>Design</dt><dd>{{ item.designer }}</dd></div> }
+        @if (item.websiteUrl) { <div><dt>Webseite</dt><dd><a [href]="item.websiteUrl" target="_blank" rel="noopener noreferrer">Webseite öffnen ↗</a></dd></div> }
+        @if (item.patternYarn) { <div><dt>Garnmenge laut Anleitung</dt><dd>{{ item.patternYarn.amount }} {{ item.patternYarn.unit }}</dd></div> }
+      </dl>
+    </section>
+
+    <section class="template-detail-card">
+      <h2>Garne</h2>
+      <p>Die Materialien werden beim Erstellen eines Projekts zugeordnet.</p>
+      @for (yarn of sortedYarns; track yarn.id) {
+        <article class="template-material"><strong>{{ yarn.name }}</strong><span>{{ yarn.brand || 'Ohne Marke' }} · {{ yarn.color || 'Farbe offen' }} @if (yarn.colorCode) { · Nr. {{ yarn.colorCode }} }</span><span>{{ yarn.length }} m / {{ yarn.weight }} g · {{ yarn.needleSize }} mm</span>@if (!yarn.needUnknown && yarn.plannedSkeins) { <span>Garnbedarf: {{ yarn.plannedSkeins }} Knäuel</span> } @for (part of yarn.composition; track $index) { <span>{{ part.material }} {{ part.percentage }}%</span> }</article>
+      } @empty { <p>Keine Garne hinterlegt.</p> }
+    </section>
+
+    <section class="template-detail-card">
+      <h2>Nadeln</h2>
+      @for (needle of sortedNeedles; track needle.id) { <p>{{ needleName(needle.id) }}</p> } @empty { <p>Keine Nadeln hinterlegt.</p> }
+    </section>
+
+    <section class="template-detail-card">
+      <h2>Anleitung</h2>
+      @if (item.instructionMode === 'pdf') {
+        @if (pdfUrl && pdfPreview) {
+          <p><a class="template-pdf-link" [href]="pdfUrl" target="_blank" rel="noopener">PDF-Anleitung in neuem Tab öffnen</a></p>
+          <iframe class="template-pdf" [src]="pdfPreview" [title]="'PDF-Anleitung für ' + item.name"></iframe>
+        } @else { <p>Keine PDF-Anleitung hinterlegt.</p> }
+        @for (section of item.pdfSections; track section.id) { <div class="template-pdf-section"><strong>{{ section.name }}</strong><span>{{ section.rowCount }} Reihen</span></div> }
+      } @else {
+        @for (section of item.sections; track section.id) {
+          <details class="template-pattern-section">
+            <summary class="disclosure-summary"><strong>{{ section.name }}</strong></summary>
+            <div class="template-pattern-body">
+              <p>Nadel: {{ needleName(section.needleId) }}</p>
+              @for (entry of section.entries; track entry.id) {
+                <article class="template-instruction">
+                  <strong>{{ entry.fromRow === entry.toRow ? 'Reihe ' + entry.fromRow : 'Reihen ' + entry.fromRow + '–' + entry.toRow }}</strong>
+                  @if (entry.type === 'range') {
+                    <span>{{ entry.instructions }} · {{ entry.stitchesPerRow }} Maschen</span><small>Garn: {{ yarnName(entry.yarnId) }}</small>
+                  } @else {
+                    <span>Musterwiederholung</span>
+                    @for (row of entry.repeatRows; track $index) { <span>Musterreihe {{ $index + 1 }}: {{ row.instructions }} · {{ row.stitchesPerRow }} Maschen · {{ yarnName(row.yarnId || entry.yarnId) }}</span> }
+                  }
+                </article>
+              }
+            </div>
+          </details>
+        } @empty { <p>Keine Anleitung hinterlegt.</p> }
+      }
+    </section>
+
+    <div class="template-detail-footer">
+      <button class="template-primary-button" type="button" (click)="openProjectDialog()">Neues Projekt mit dieser Vorlage</button>
+      @if (item.isOwner && !item.sharingRestricted) {
+        @if (item.shared) { <button class="template-secondary-button" type="button" [disabled]="sharing" (click)="setSharing(false)">Teilen beenden</button> }
+        @else { <button class="template-secondary-button" type="button" (click)="openShareDialog()">Vorlage mit Freunden teilen</button> }
+      }
+    </div>
+    @if (item.isOwner && item.sharingRestricted) { <p class="template-detail-message">Diese Vorlage stammt aus einer geteilten Vorlage und kann nicht erneut geteilt werden.</p> }
+    @if (shareError && !shareDialogOpen) { <p class="template-detail-error" role="alert">{{ shareError }}</p> }
+  }
+</section>
+
+@if (shareDialogOpen) {
+  <div class="template-dialog-backdrop" (click)="!sharing && (shareDialogOpen = false)">
+    <section class="template-dialog" role="dialog" aria-modal="true" aria-labelledby="share-template-title" (click)="$event.stopPropagation()">
+      <h2 id="share-template-title">Vorlage mit Freunden teilen</h2>
+      <p>Die Vorlage und ihre Anleitung werden für alle deine aktuellen und zukünftigen Freunde sichtbar. Du bist dafür verantwortlich, dass du die Vorlage und ihre Inhalte rechtlich weitergeben darfst.</p>
+      <label class="template-share-confirmation"><input type="checkbox" name="rightsConfirmed" [(ngModel)]="rightsConfirmed" /> <span>Ich bestätige, dass ich diese Vorlage und ihre Inhalte mit meinen Freunden teilen darf.</span></label>
+      @if (shareError) { <p class="template-error" role="alert">{{ shareError }}</p> }
+      <div class="template-save-actions">
+        <button class="template-secondary-button" type="button" [disabled]="sharing" (click)="shareDialogOpen = false">Abbrechen</button>
+        <button class="template-primary-button" type="button" [disabled]="sharing || !rightsConfirmed" (click)="setSharing(true)">{{ sharing ? 'Wird geteilt …' : 'Teilen' }}</button>
+      </div>
+    </section>
+  </div>
+}
+
+@if (projectDialogOpen) {
+  <div class="template-dialog-backdrop" (click)="!creating && (projectDialogOpen = false)">
+    <section class="template-dialog" role="dialog" aria-modal="true" aria-labelledby="create-project-title" (click)="$event.stopPropagation()">
+      <h2 id="create-project-title">Neues Projekt erstellen</h2>
+      <p>Gib deinem neuen Projekt einen Namen.</p>
+      <form (ngSubmit)="createProject()">
+        <label>Projektname <input name="newProjectName" [(ngModel)]="projectName" maxlength="100" required autofocus placeholder="z. B. Mein Pullover" /></label>
+        @if (projectError) { <p class="template-error" role="alert">{{ projectError }}</p> }
+        <div class="template-save-actions">
+          <button class="template-secondary-button" type="button" [disabled]="creating" (click)="projectDialogOpen = false">Abbrechen</button>
+          <button class="template-primary-button" type="submit" [disabled]="creating || !projectName.trim()">{{ creating ? 'Wird erstellt …' : 'OK' }}</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

@@ -106,7 +106,10 @@ export interface ProjectInput {
   type: ProjectKind;
   category: ProjectCategory;
   name: string;
+  size: string;
   image: string | null;
+  designer?: string;
+  websiteUrl?: string;
   gauge?: {
     pattern: Gauge;
     personal: Gauge;
@@ -134,6 +137,35 @@ export interface Project extends ProjectInput {
   updatedAt: string;
 }
 
+export interface TemplateSummary {
+  id: string;
+  name: string;
+  creatorUsername: string;
+  isOwner: boolean;
+  shared: boolean;
+  designer?: string;
+  size: string;
+  type: ProjectKind;
+  category: ProjectCategory;
+  instructionMode: 'manual' | 'pdf';
+  hasImage: boolean;
+  createdAt: string;
+}
+
+export interface ProjectTemplate extends TemplateSummary {
+  websiteUrl?: string;
+  sharingRestricted?: boolean;
+  projectName: string;
+  image: ProjectInput['image'];
+  gauge: ProjectInput['gauge'];
+  patternYarn: ProjectInput['patternYarn'];
+  yarns: ProjectYarn[];
+  needles: Needle[];
+  instructionPdfName: string | null;
+  pdfSections: PdfSection[];
+  sections: ProjectSection[];
+}
+
 export type FeedActivityType = 'started' | 'section_completed' | 'finished' | 'cancelled';
 
 export interface FeedActivity {
@@ -155,6 +187,39 @@ export class ProjectService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${window.MASCHENMATE_CONFIG?.apiUrl?.replace(/\/+$/, '') ?? ''}/api/projects`;
   private readonly feedUrl = `${window.MASCHENMATE_CONFIG?.apiUrl?.replace(/\/+$/, '') ?? ''}/api/feed`;
+  private readonly templatesUrl = `${window.MASCHENMATE_CONFIG?.apiUrl?.replace(/\/+$/, '') ?? ''}/api/project-templates`;
+
+  listTemplates(): Observable<{ templates: TemplateSummary[] }> {
+    return this.http.get<{ templates: TemplateSummary[] }>(this.templatesUrl, { withCredentials: true }).pipe(catchError((error: HttpErrorResponse) => this.handleError(error)));
+  }
+
+  saveTemplate(projectId: string, name: string): Observable<{ template: TemplateSummary }> {
+    return this.http.post<{ template: TemplateSummary }>(this.templatesUrl, { projectId, name }, { withCredentials: true }).pipe(catchError((error: HttpErrorResponse) => this.handleError(error)));
+  }
+
+  getTemplate(id: string): Observable<{ template: ProjectTemplate }> {
+    return this.http.get<{ template: ProjectTemplate }>(`${this.templatesUrl}/${encodeURIComponent(id)}`, { withCredentials: true }).pipe(catchError((error: HttpErrorResponse) => this.handleError(error)));
+  }
+
+  templatePdfUrl(id: string): string {
+    return `${this.templatesUrl}/${encodeURIComponent(id)}/instruction-pdf`;
+  }
+
+  templateImageUrl(id: string): string {
+    return `${this.templatesUrl}/${encodeURIComponent(id)}/image`;
+  }
+
+  createFromTemplate(id: string, name: string): Observable<{ project: Project }> {
+    return this.http.post<{ project: Project }>(`${this.templatesUrl}/${encodeURIComponent(id)}/projects`, { name }, { withCredentials: true }).pipe(catchError((error: HttpErrorResponse) => this.handleError(error)));
+  }
+
+  deleteTemplate(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.templatesUrl}/${encodeURIComponent(id)}`, { withCredentials: true }).pipe(catchError((error: HttpErrorResponse) => this.handleError(error)));
+  }
+
+  setTemplateSharing(id: string, shared: boolean): Observable<{ shared: boolean }> {
+    return this.http.put<{ shared: boolean }>(`${this.templatesUrl}/${encodeURIComponent(id)}/sharing`, shared ? { shared: true, rightsConfirmed: true } : { shared: false }, { withCredentials: true }).pipe(catchError((error: HttpErrorResponse) => this.handleError(error)));
+  }
 
   instructionPdfUrl(projectId: string): string {
     return `${this.apiUrl}/${encodeURIComponent(projectId)}/instruction-pdf`;
@@ -218,6 +283,12 @@ export class ProjectService {
 
   cancel(projectId: string): Observable<{ project: Project }> {
     return this.http.post<{ project: Project }>(`${this.apiUrl}/${encodeURIComponent(projectId)}/cancel`, {}, { withCredentials: true }).pipe(
+      catchError((error: HttpErrorResponse) => this.handleError(error)),
+    );
+  }
+
+  restart(projectId: string): Observable<{ project: Project }> {
+    return this.http.post<{ project: Project }>(`${this.apiUrl}/${encodeURIComponent(projectId)}/restart`, {}, { withCredentials: true }).pipe(
       catchError((error: HttpErrorResponse) => this.handleError(error)),
     );
   }

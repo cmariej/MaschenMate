@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { activityStore, friendStore, materialStore, projectStore, userStore } from '../storage.js';
+import { activityStore, friendStore, materialStore, projectStore, templateStore, userStore } from '../storage.js';
 import { requireAuth } from './auth.js';
 import type { StoredUser } from '../user-store.js';
 
@@ -68,6 +68,7 @@ router.patch('/registrations/:userId', async (req, res, next) => {
       await userStore.delete(userId.data);
       await projectStore.deleteAllForUser(userId.data);
       await materialStore.deleteAllForUser(userId.data);
+      await templateStore.deleteAllForUser(userId.data);
       await friendStore.deleteAllForUser(userId.data);
       await activityStore.deleteAllForUser(userId.data);
     }

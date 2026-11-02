@@ -3,7 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import { config } from '../config.js';
-import { activityStore, friendStore, materialStore, projectStore, userStore } from '../storage.js';
+import { activityStore, friendStore, materialStore, projectStore, templateStore, userStore } from '../storage.js';
 import { DuplicateUsernameError, type StoredUser } from '../user-store.js';
 
 const router = Router();
@@ -289,6 +289,7 @@ router.delete('/account', async (req, res, next) => {
     await activityStore.deleteAllForUser(currentUser.id);
     await projectStore.deleteAllForUser(currentUser.id);
     await materialStore.deleteAllForUser(currentUser.id);
+    await templateStore.deleteAllForUser(currentUser.id);
     clearAuthCookie(res);
     res.status(204).end();
   } catch (error) {

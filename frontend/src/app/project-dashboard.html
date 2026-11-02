@@ -21,8 +21,6 @@
           <span class="filter-summary-count">
           @if (yarnNeedleSizeFilters.length || yarnColorFilters.length || yarnMaterialFilters.length) {
             {{ yarnNeedleSizeFilters.length + yarnColorFilters.length + yarnMaterialFilters.length }} ausgewählt
-          } @else {
-            Filteroptionen anzeigen
           }
           </span>
         </summary>
@@ -75,9 +73,55 @@
       </div>
     } @else {
       <div class="material-grid needle-grid">
-        @for (needle of materials.needles; track needle.id) {
+        @for (needle of sortedNeedles; track needle.id) {
           <app-needle [needle]="needle" [kinds]="needleKinds" mode="preview" (open)="openNeedleDetail(needle)" />
         } @empty { <div class="empty-state"><p>Noch keine Nadeln im Vorrat.</p></div> }
+      </div>
+    }
+  } @else if (page === 'templates') {
+    <header class="dashboard-heading"><div><h1>Vorlagen</h1><p>Öffne eine Vorlage, um daraus ein neues Projekt zu erstellen.</p></div></header>
+    @if (templatesError) { <p class="notice error-notice" role="alert">{{ templatesError }}</p> }
+    <details class="project-filters">
+      <summary class="disclosure-summary yarn-filter-heading"><strong>Vorlagen filtern</strong><span class="filter-summary-count">@if (activeTemplateFilterCount) { {{ activeTemplateFilterCount }} ausgewählt }</span></summary>
+      @if (activeTemplateFilterCount) { <button type="button" class="filter-clear" (click)="clearTemplateFilters()">Filter zurücksetzen</button> }
+      <div class="yarn-filter-groups">
+        <fieldset class="yarn-filter-group"><legend>Herkunft</legend><div class="filter-options">
+          <label><input type="radio" name="templateOwnerFilter" value="all" [(ngModel)]="templateOwnerFilter" />Alle</label>
+          <label><input type="radio" name="templateOwnerFilter" value="own" [(ngModel)]="templateOwnerFilter" />Eigene Vorlagen</label>
+          <label><input type="radio" name="templateOwnerFilter" value="friends" [(ngModel)]="templateOwnerFilter" />Vorlagen von Freunden</label>
+        </div></fieldset>
+        <fieldset class="yarn-filter-group"><legend>Art</legend><div class="filter-options">
+          <label><input type="radio" name="templateTypeFilter" value="all" [(ngModel)]="templateTypeFilter" />Alle</label>
+          <label><input type="radio" name="templateTypeFilter" value="knitting" [(ngModel)]="templateTypeFilter" />Stricken</label>
+          <label><input type="radio" name="templateTypeFilter" value="crochet" [(ngModel)]="templateTypeFilter" />Häkeln</label>
+        </div></fieldset>
+        <fieldset class="yarn-filter-group"><legend>Kategorie</legend><div class="filter-options">
+          <label><input type="radio" name="templateCategoryFilter" value="all" [(ngModel)]="templateCategoryFilter" />Alle</label>
+          @for (category of categories; track category.value) { <label><input type="radio" name="templateCategoryFilter" [value]="category.value" [(ngModel)]="templateCategoryFilter" />{{ category.label }}</label> }
+        </div></fieldset>
+      </div>
+    </details>
+    @if (templatesLoading) { <div class="empty-state">Vorlagen werden geladen …</div> }
+    @else if (!filteredTemplates.length) {
+      <div class="empty-state"><p>{{ templates.length ? 'Keine Vorlagen passen zu diesen Filtern.' : 'Noch keine Vorlagen gespeichert. Speichere ein Projekt in den Projektdetails als Vorlage.' }}</p></div>
+    } @else {
+      <div class="template-list">
+        @for (template of filteredTemplates; track template.id) {
+          <article class="template-card">
+            <button class="template-open-button" type="button" (click)="openTemplate(template.id)">
+              <span class="template-cover" aria-hidden="true">
+                @if (template.hasImage) { <img [src]="templateImageUrl(template.id)" alt="" loading="lazy" decoding="async" /> }
+                @else { <span>{{ template.type === 'knitting' ? '🧶' : '🌼' }}</span> }
+              </span>
+              <span class="template-open-info"><strong>{{ template.name }}@if (template.shared) { <span class="template-shared-icon" [class.friend-template-icon]="!template.isOwner" [attr.aria-label]="template.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'" [title]="template.isOwner ? 'Mit Freunden geteilt' : 'Vorlage von einem Freund'"><app-fa-icon [icon]="template.isOwner ? faShareNodes : faUser" /></span> }</strong><span>{{ template.type === 'knitting' ? 'Stricken' : 'Häkeln' }} · {{ categoryName(template.category) }}@if (template.size) { · Größe {{ template.size }} }</span><span>Gespeichert von {{ template.creatorUsername }}@if (template.designer) { · Design: {{ template.designer }} }</span></span>
+            </button>
+            @if (template.isOwner && templateDeleteId === template.id) {
+              <div class="template-card-actions"><span>Vorlage löschen?</span><button class="remove-button" type="button" (click)="deleteTemplate(template.id)">Löschen</button><button class="secondary-button" type="button" (click)="templateDeleteId = null">Abbrechen</button></div>
+            } @else if (template.isOwner) {
+              <button class="template-delete-button" type="button" (click)="templateDeleteId = template.id" [attr.aria-label]="'Vorlage ' + template.name + ' löschen'" title="Vorlage löschen"><app-fa-icon [icon]="faTrashCan" /></button>
+            }
+          </article>
+        }
       </div>
     }
   } @else {
@@ -195,8 +239,6 @@
           <span class="filter-summary-count">
             @if (activeProjectFilterCount) {
               {{ activeProjectFilterCount }} ausgewählt
-            } @else {
-              Filteroptionen anzeigen
             }
           </span>
         </summary>
@@ -205,7 +247,7 @@
         }
         <div class="yarn-filter-groups">
           <fieldset class="yarn-filter-group">
-            <legend>Projektart</legend>
+            <legend>Art</legend>
             <div class="filter-options">
               <label><input type="radio" name="projectTypeFilter" value="all" [(ngModel)]="projectTypeFilter" />Alle</label>
               <label><input type="radio" name="projectTypeFilter" value="knitting" [(ngModel)]="projectTypeFilter" />Stricken</label>
@@ -270,6 +312,7 @@
 <nav class="bottom-tabs" aria-label="Hauptnavigation">
   <button type="button" [class.active]="page === 'home'" (click)="showPage('home')"><app-fa-icon [icon]="faHomeTab" /><span>Dashboard</span></button>
   <button type="button" [class.active]="page === 'projects'" (click)="showPage('projects')"><app-fa-icon [icon]="faProjectsTab" /><span>Projekte</span></button>
+  <button type="button" [class.active]="page === 'templates'" (click)="showPage('templates')"><app-fa-icon [icon]="faBookOpen" /><span>Vorlagen</span></button>
   <button type="button" [class.active]="page === 'yarns'" (click)="showPage('yarns')">
     <svg class="craft-tab-icon" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z" />
@@ -297,16 +340,22 @@
     [progress]="progressPercent(project)"
     [completed]="projectCompleted(project)"
     [busy]="busyProjectId === project.id"
+    [actionError]="error"
+    [templateSaving]="templateSaving"
+    [templateSaved]="templateSaved"
+    [templateError]="templateError"
     [nextRow]="currentRow(project)"
     [progressSections]="trackingSections(project)"
     [sectionProgress]="sectionProgressMap(project)"
     [sectionNeedles]="sectionNeedlesMap(project)"
-    [yarnInventory]="materials.yarns"
     [formatDate]="formatDate"
     (edit)="editProject(project)"
     (editInstructions)="editProjectInstructions(project)"
+    (saveTemplate)="saveProjectTemplate(project, $event)"
+    (resetTemplateStatus)="templateSaved = false; templateError = ''"
     (back)="closeDetails()"
     (start)="startProject(project)"
+    (restart)="restartProject(project)"
     (makeCurrent)="makeCurrentProject(project)"
     (sectionChange)="selectSection(project)"
     (completeRow)="completeNextRow(project)"
@@ -318,11 +367,11 @@
 }
 
 @if (view === 'yarn-edit' && yarnDraft; as yarn) {
-  <app-yarn [yarn]="yarn" mode="edit" [isNew]="!isEditingSavedYarn" [saving]="materialsSaving" [error]="error" (back)="closeMaterialEditor()" (save)="saveYarn()" (remove)="removeLibraryYarn(materials.yarns.indexOf(yarn))" />
+  <app-yarn [yarn]="yarn" mode="edit" [isNew]="!isEditingSavedYarn" [saving]="materialsSaving" [error]="error" (back)="closeMaterialEditor()" (save)="saveYarn()" (remove)="removeLibraryYarn(yarn.id)" />
 }
 
 @if (view === 'needle-edit' && needleDraft; as needle) {
-  <app-needle [needle]="needle" [kinds]="needleKinds" mode="edit" [isNew]="!isEditingSavedNeedle" [saving]="materialsSaving" [error]="error" (back)="closeMaterialEditor()" (save)="saveNeedle()" (remove)="removeLibraryNeedle(materials.needles.indexOf(needle))" />
+  <app-needle [needle]="needle" [kinds]="needleKinds" mode="edit" [isNew]="!isEditingSavedNeedle" [saving]="materialsSaving" [error]="error" (back)="closeMaterialEditor()" (save)="saveNeedle()" (remove)="removeLibraryNeedle(needle.id)" />
 }
 
 @if (view === 'project-edit') {
@@ -333,7 +382,6 @@
     [needleKinds]="needleKinds"
     [editing]="editingId !== null"
     [instructionOnly]="instructionOnlyEditor"
-    [projects]="projects"
     [saving]="saving"
     [processingImage]="processingProjectImage"
     [editorError]="editorError"
@@ -352,7 +400,6 @@
     (duplicateSection)="duplicateSection($event)"
     (duplicatePdfSection)="duplicatePdfSection($event)"
     (duplicateEntry)="duplicateEntry($event.sectionIndex, $event.entryIndex)"
-    (duplicateProject)="duplicateProject($event)"
   />
   @if (duplicationMessage(); as message) {
     <div class="duplication-toast" role="status" aria-live="polite">{{ message }}</div>

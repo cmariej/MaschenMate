@@ -3,7 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { faArrowLeft, faPen } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
-import { Project, ProjectService, Yarn } from './project.service';
+import { Project, ProjectService } from './project.service';
+import { compareNames } from './name-sort';
 
 export interface ProjectDetailRow {
   number: number;
@@ -31,13 +32,36 @@ interface YarnUsage {
     <section class="detail-page" aria-labelledby="detail-title">
       <header class="detail-page-heading">
         <button class="route-back-button icon-action-button back-navigation-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
-        <div class="detail-title-group"><span class="eyebrow">{{ project.type === 'knitting' ? 'Strickprojekt' : 'Häkelprojekt' }} · {{ category }}</span><h2 id="detail-title">{{ project.name }}</h2></div>
+        <div class="detail-title-group"><span class="eyebrow">{{ project.type === 'knitting' ? 'Strickprojekt' : 'Häkelprojekt' }} · {{ category }}</span><h2 id="detail-title">{{ project.name }}</h2>@if (project.size) { <span class="project-size">Größe {{ project.size }}</span> }</div>
         <div class="detail-heading-actions">
           <button class="secondary-button icon-action-button" type="button" (click)="edit.emit()" aria-label="Projekt bearbeiten" title="Projekt bearbeiten"><app-fa-icon [icon]="faPen" /></button>
         </div>
       </header>
       @if (project.image) { <img class="detail-project-image" [src]="project.image" [alt]="'Bild für ' + project.name" /> }
       <div class="detail-content">
+        @if (project.progress.cancelledAt || (!project.progress.startedAt && !completed)) {
+        <section class="detail-block progress-card" aria-labelledby="progress-title">
+          <header class="progress-heading progress-heading-static">
+            <div><h3 id="progress-title">Mein Fortschritt</h3></div>
+            <strong class="progress-badge">{{ progress }}%</strong>
+            <div class="progress-track" role="progressbar" aria-label="Gesamtfortschritt des Projekts" [attr.aria-valuenow]="progress" aria-valuemin="0" aria-valuemax="100"><span [style.width.%]="progress"></span></div>
+          </header>
+          @if (project.progress.cancelledAt) {
+            <p class="project-status cancelled-status">Projekt abgebrochen · {{ formatDate(project.progress.cancelledAt) }}</p>
+            @if (restartPending) {
+              <div class="restart-confirm">
+                <p>Der bisherige Fortschritt wird auf null zurückgesetzt. Projekt neu starten?</p>
+                <div><button class="secondary-button" type="button" [disabled]="busy" (click)="restartPending = false">Abbrechen</button><button class="small-button" type="button" [disabled]="busy" (click)="restart.emit()">Ja, neu starten</button></div>
+              </div>
+            } @else {
+              <div class="progress-empty-state"><button class="small-button start-project-button" type="button" [disabled]="busy" (click)="restartPending = true">Projekt neu starten</button></div>
+            }
+          } @else {
+            <div class="progress-empty-state"><button class="small-button start-project-button" type="button" [disabled]="busy" (click)="start.emit()">Projekt starten</button></div>
+          }
+          @if (actionError) { <p class="project-action-error" role="alert">{{ actionError }}</p> }
+        </section>
+        } @else {
         <details class="detail-block progress-card" aria-labelledby="progress-title">
           <summary class="disclosure-summary progress-heading">
             <div><h3 id="progress-title">Mein Fortschritt</h3></div>
@@ -51,8 +75,6 @@ interface YarnUsage {
             <p class="project-status cancelled-status">Projekt abgebrochen · {{ formatDate(project.progress.cancelledAt) }}</p>
           } @else if (completed) {
             <p class="project-status finished-status">Projekt fertiggestellt</p>
-          } @else if (!project.progress.startedAt) {
-            <div class="progress-empty-state"><p>Starte das Projekt, um den Fortschritt zu verfolgen.</p><button class="small-button start-project-button" type="button" [disabled]="busy" (click)="start.emit()">Projekt starten</button></div>
           } @else if (project.instructionMode === 'pdf' && project.pdfSections.length === 0) {
             <div class="pdf-progress-controls">
               <p>PDF-Anleitung: Fortschritt in 10-%-Schritten</p>
@@ -102,6 +124,33 @@ interface YarnUsage {
             }
           }
         </details>
+        }
+        <section class="instructions-accordion project-information" aria-labelledby="project-information-title">
+          <header class="instructions-heading instructions-fixed-heading"><span id="project-information-title">Allgemeine Projektangaben</span></header>
+          <div class="instructions-content project-information-content">
+            <dl class="project-information-grid">
+              <div><dt>Art</dt><dd>{{ project.type === 'knitting' ? 'Stricken' : 'Häkeln' }}</dd></div>
+              <div><dt>Kategorie</dt><dd>{{ category }}</dd></div>
+              <div><dt>Größe</dt><dd>{{ project.size || 'Nicht angegeben' }}</dd></div>
+              @if (project.designer) { <div><dt>Design</dt><dd>{{ project.designer }}</dd></div> }
+              @if (project.websiteUrl) { <div><dt>Webseite</dt><dd><a [href]="project.websiteUrl" target="_blank" rel="noopener noreferrer">Webseite öffnen ↗</a></dd></div> }
+            </dl>
+            <div class="project-information-materials">
+              <h3>Garne</h3>
+              @for (yarn of sortedProjectYarns; track yarn.id) {
+                <div class="project-information-material">
+                  <strong>{{ yarn.name }}</strong>
+                  <span>{{ yarn.brand || 'Ohne Marke' }} · {{ yarn.color || 'Farbe offen' }}@if (yarn.colorCode) { · Nr. {{ yarn.colorCode }} }</span>
+                  <span>Maschenprobe: {{ yarn.gauge.stitches }} Maschen · {{ yarn.gauge.rows }} Reihen / 10 × 10 cm</span>
+                </div>
+              } @empty { <p>Keine Garne ausgewählt.</p> }
+              <h3>Nadeln</h3>
+              @for (needle of sortedProjectNeedles; track needle.id) {
+                <div class="project-information-material"><strong>{{ needleLabel(needle) }}</strong></div>
+              } @empty { <p>Keine Nadeln ausgewählt.</p> }
+            </div>
+          </div>
+        </section>
         @if (project.instructionMode !== 'pdf') {
         <section class="instructions-accordion">
           <header class="instructions-heading instructions-fixed-heading">
@@ -188,7 +237,7 @@ interface YarnUsage {
             <h4 id="yarn-usage-title">Garnbedarf und Verbrauch</h4>
             <p class="usage-explanation">Der Bedarf kommt aus deiner Angabe oder wird bei manuellen Anleitungen mit einer gewogenen 10 × 10-cm-Maschenprobe geschätzt.</p>
             <div class="yarn-usage-list">
-              @for (yarn of project.yarns; track yarn.id) {
+              @for (yarn of sortedProjectYarns; track yarn.id) {
                 @let usage = yarnUsage(yarn);
                 <article class="yarn-usage-item">
                   <h5>{{ yarn.name }}</h5>
@@ -226,8 +275,26 @@ interface YarnUsage {
         } @else {
           <button class="delete-link" type="button" (click)="deletePending = true">Projekt löschen</button>
         }
+        <div class="project-template-control"><button class="template-save-button" type="button" (click)="openTemplateForm()">Als Vorlage speichern</button></div>
+        @if (templateSaved) { <p role="status" class="template-saved-notice">Vorlage erfolgreich gespeichert.</p> }
       </div>
     </section>
+    @if (templateFormOpen) {
+      <div class="template-dialog-backdrop" (click)="!templateSaving && (templateFormOpen = false)">
+        <section class="template-dialog" role="dialog" aria-modal="true" aria-labelledby="template-save-title" (click)="$event.stopPropagation()">
+          <h2 id="template-save-title">Als Vorlage speichern</h2>
+          <p>Gib deiner Vorlage einen Namen. Der Projektfortschritt wird nicht übernommen.</p>
+          <form (ngSubmit)="saveTemplate.emit(templateName.trim())">
+            <label>Name der Vorlage <input name="templateName" [(ngModel)]="templateName" maxlength="100" required autofocus placeholder="z. B. Mein Lieblingspullover" /></label>
+            @if (templateError) { <p role="alert" class="template-error">{{ templateError }}</p> }
+            <div class="template-save-actions">
+              <button type="button" class="secondary-button" [disabled]="templateSaving" (click)="templateFormOpen = false">Abbrechen</button>
+              <button type="submit" class="template-save-button" [disabled]="templateSaving || !templateName.trim()">{{ templateSaving ? 'Wird gespeichert …' : 'OK' }}</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    }
   `,
 })
 export class ProjectDetailComponent implements OnChanges {
@@ -245,16 +312,22 @@ export class ProjectDetailComponent implements OnChanges {
   @Input() completed = false;
   @Input() isCurrentProject = false;
   @Input() busy = false;
+  @Input() actionError = '';
+  @Input() templateSaving = false;
+  @Input() templateSaved = false;
+  @Input() templateError = '';
   @Input() nextRow: ProjectDetailRow | null = null;
   @Input() progressSections: Project['sections'] = [];
   @Input() sectionProgress: Record<string, number> = {};
   @Input() sectionNeedles: Record<string, string> = {};
-  @Input() yarnInventory: Yarn[] = [];
   @Input() formatDate: (date: string) => string = (date) => date;
   @Output() edit = new EventEmitter<void>();
   @Output() editInstructions = new EventEmitter<void>();
+  @Output() saveTemplate = new EventEmitter<string>();
+  @Output() resetTemplateStatus = new EventEmitter<void>();
   @Output() back = new EventEmitter<void>();
   @Output() start = new EventEmitter<void>();
+  @Output() restart = new EventEmitter<void>();
   @Output() makeCurrent = new EventEmitter<void>();
   @Output() sectionChange = new EventEmitter<void>();
   @Output() completeRow = new EventEmitter<void>();
@@ -264,9 +337,31 @@ export class ProjectDetailComponent implements OnChanges {
   @Output() remove = new EventEmitter<void>();
   protected deletePending = false;
   protected cancelPending = false;
+  protected restartPending = false;
+  protected templateFormOpen = false;
+  protected templateName = '';
+
+  protected openTemplateForm(): void {
+    this.templateName = this.project.name;
+    this.templateFormOpen = !this.templateFormOpen;
+    if (this.templateFormOpen) this.resetTemplateStatus.emit();
+  }
 
   protected sectionRowCountFor(section: Project['sections'][number]): number {
     return section.entries.reduce((total, entry) => total + Math.max(0, entry.toRow - entry.fromRow + 1), 0);
+  }
+
+  protected needleLabel(needle: Project['needles'][number]): string {
+    const names: Record<typeof needle.type, string> = { straight: 'Gerade Stricknadeln', circular: 'Rundstricknadel', 'double-pointed': 'Nadelspiel', 'crochet-hook': 'Häkelnadel', other: 'Sonstige Nadel' };
+    return `${names[needle.type]} · ${needle.size} mm`;
+  }
+
+  protected get sortedProjectYarns(): Project['yarns'] {
+    return [...this.project.yarns].sort((left, right) => compareNames(left.name, right.name));
+  }
+
+  protected get sortedProjectNeedles(): Project['needles'] {
+    return [...this.project.needles].sort((left, right) => compareNames(this.needleLabel(left), this.needleLabel(right)));
   }
 
   protected sectionCompletedRowsFor(section: Project['sections'][number]): number {
@@ -279,6 +374,8 @@ export class ProjectDetailComponent implements OnChanges {
   }
 
   ngOnChanges(): void {
+    if (!this.project?.progress.cancelledAt) this.restartPending = false;
+    if (this.templateSaved) this.templateFormOpen = false;
     if (this.project?.instructionMode !== 'pdf') {
       this.instructionPdfHref = null;
       this.instructionPdfUrl = null;
@@ -323,8 +420,7 @@ export class ProjectDetailComponent implements OnChanges {
   }
 
   protected yarnUsage(yarn: Project['yarns'][number]): YarnUsage {
-    const inventoryYarn = this.yarnInventory.find((item) => item.id === yarn.id) ?? yarn;
-    const skeinLength = inventoryYarn.length;
+    const skeinLength = yarn.length;
     const usage: YarnUsage = {
       source: 'unknown',
       requiredMeters: null,
@@ -335,7 +431,7 @@ export class ProjectDetailComponent implements OnChanges {
       openedSkein: null,
       remainingSkeins: null,
     };
-    if (skeinLength <= 0 || inventoryYarn.weight <= 0) return usage;
+    if (skeinLength <= 0 || yarn.weight <= 0) return usage;
 
     const stitchEvents = this.yarnStitchEvents(yarn.id);
     const sampleStitchCount = yarn.gauge.stitches * yarn.gauge.rows;
@@ -345,7 +441,7 @@ export class ProjectDetailComponent implements OnChanges {
       && (sampleWeightPerTenCentimeters ?? 0) > 0
       && sampleStitchCount > 0
       && stitchEvents.planned > 0;
-    const metersPerGram = skeinLength / inventoryYarn.weight;
+    const metersPerGram = skeinLength / yarn.weight;
 
     if (!yarn.needUnknown && yarn.plannedSkeins !== null && Number.isInteger(yarn.plannedSkeins) && yarn.plannedSkeins > 0) {
       usage.source = 'pattern';
@@ -431,6 +527,6 @@ export class ProjectDetailComponent implements OnChanges {
       }
     }
     yarnIds.delete('');
-    return this.project.yarns.filter((yarn) => yarnIds.has(yarn.id));
+    return this.sortedProjectYarns.filter((yarn) => yarnIds.has(yarn.id));
   }
 }

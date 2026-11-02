@@ -18,6 +18,22 @@
               "percentage": 100
             }
           ]
+        },
+        {
+          "id": "4af28cf9-c62a-4ba8-b519-e233cd9c0415",
+          "name": "Friedas #Sechste",
+          "brand": "Friedas Wollhaus",
+          "color": "Gelb",
+          "colorCode": "761",
+          "needleSize": 5,
+          "length": 85,
+          "weight": 50,
+          "composition": [
+            {
+              "material": "Mikropolyester",
+              "percentage": 100
+            }
+          ]
         }
       ],
       "needles": [
@@ -27,7 +43,7 @@
           "size": 7
         },
         {
-          "id": "ddf89079-2685-464f-ba7a-5b9d518e849c",
+          "id": "71e962cf-00d2-42b1-b0c1-066ac359b974",
           "type": "circular",
           "size": 4
         }
@@ -47,6 +63,22 @@
           "composition": [
             {
               "material": "Baumwolle",
+              "percentage": 100
+            }
+          ]
+        },
+        {
+          "id": "cac2e35f-ef07-4b4e-b51d-251bdc1c3e83",
+          "name": "Friedas #Sechste",
+          "brand": "Friedas Wollhaus",
+          "color": "Gelb",
+          "colorCode": "761",
+          "needleSize": 5,
+          "length": 85,
+          "weight": 50,
+          "composition": [
+            {
+              "material": "Mikropolyester",
               "percentage": 100
             }
           ]

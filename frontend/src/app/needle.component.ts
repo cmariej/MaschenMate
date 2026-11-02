@@ -23,10 +23,10 @@ import { MaterialViewMode } from './yarn.component';
           <label class="field">Größe (mm)<input name="needleSize" type="number" min="0.1" step="0.1" [(ngModel)]="needle.size" required /></label>
           @if (error) { <p class="notice error-notice" role="alert">{{ error }}</p> }
           @if (deletePending) {
-            <p class="delete-confirmation" role="alert">Diese Nadel wirklich löschen? <button class="delete-link" type="button" (click)="remove.emit()">Nadel löschen</button><button class="secondary-button" type="button" (click)="deletePending = false">Abbrechen</button></p>
+            <p class="delete-confirmation" role="alert">Diese Nadel wirklich löschen? <button class="delete-link" type="button" [disabled]="saving" (click)="remove.emit()">Nadel löschen</button><button class="secondary-button" type="button" [disabled]="saving" (click)="deletePending = false">Abbrechen</button></p>
           }
           <footer class="editor-actions">
-            @if (!isNew) { <button class="delete-link" type="button" (click)="deletePending = true">Nadel löschen</button> }
+            @if (!isNew && !deletePending) { <button class="delete-link" type="button" [disabled]="saving" (click)="deletePending = true">Nadel löschen</button> }
             <button class="secondary-button" type="button" (click)="back.emit()">Abbrechen</button>
             <button class="primary-button" type="submit" [disabled]="needleForm.invalid || saving">{{ saving ? 'Wird gespeichert …' : 'Speichern' }}</button>
           </footer>

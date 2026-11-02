@@ -107,6 +107,10 @@ export interface ProjectInput {
   type: ProjectKind;
   category: ProjectCategory;
   name: string;
+  size: string;
+  designer?: string;
+  websiteUrl?: string;
+  sharedSource?: boolean;
   image: string | null;
   gauge?: {
     pattern: Gauge;
@@ -163,6 +167,7 @@ export function normalizeStoredProject(project: Project): Project {
   return {
     ...legacy,
     category: legacy.category ?? 'other',
+    size: legacy.size ?? '',
     instructionMode: legacy.instructionMode ?? 'manual',
     instructionPdf: legacy.instructionPdf ?? null,
     instructionPdfName: legacy.instructionPdfName ?? null,

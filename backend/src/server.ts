@@ -7,10 +7,11 @@ import { config } from './config.js';
 import authRouter from './routes/auth.js';
 import projectRouter from './routes/projects.js';
 import materialsRouter from './routes/materials.js';
+import projectTemplatesRouter from './routes/project-templates.js';
 import friendsRouter from './routes/friends.js';
 import feedRouter from './routes/feed.js';
 import adminRouter from './routes/admin.js';
-import { activityStore, friendStore, materialStore, projectStore, userStore } from './storage.js';
+import { activityStore, friendStore, materialStore, projectStore, templateStore, userStore } from './storage.js';
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/auth', (req, res, next) => {
 }, authRouter);
 app.use('/api/projects', projectRouter);
 app.use('/api/materials', materialsRouter);
+app.use('/api/project-templates', projectTemplatesRouter);
 app.use('/api/friends/search', friendSearchLimiter);
 app.use('/api/friends', friendsRouter);
 app.use('/api/feed', feedRouter);
@@ -79,6 +81,7 @@ try {
   await activityStore.initialize();
   await projectStore.initialize();
   await materialStore.initialize();
+  await templateStore.initialize();
   app.listen(config.PORT, () => {
     console.log(`MaschenMate API läuft auf http://localhost:${config.PORT}`);
   });

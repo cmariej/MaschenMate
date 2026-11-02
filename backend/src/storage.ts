@@ -9,6 +9,8 @@ import { LocalFriendStore, type FriendStore } from './friend-store.js';
 import { MongoFriendStore } from './mongo-friend-store.js';
 import { LocalActivityStore, type ActivityStore } from './activity-store.js';
 import { MongoActivityStore } from './mongo-activity-store.js';
+import { LocalTemplateStore, type TemplateStore } from './template-store.js';
+import { MongoTemplateStore } from './mongo-template-store.js';
 
 function createUserStore(): UserStore {
   if (config.STORAGE_DRIVER === 'file') {
@@ -33,3 +35,6 @@ export const projectStore: ProjectStore =
 
 export const materialStore: MaterialStore =
   config.STORAGE_DRIVER === 'mongo' ? new MongoMaterialStore() : new LocalMaterialStore();
+
+export const templateStore: TemplateStore =
+  config.STORAGE_DRIVER === 'mongo' ? new MongoTemplateStore() : new LocalTemplateStore();

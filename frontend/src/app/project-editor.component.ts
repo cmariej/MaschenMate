@@ -2,6 +2,7 @@ import { Component, ElementRef, EventEmitter, HostListener, Injector, Input, Out
 import { FormsModule } from '@angular/forms';
 import { faArrowLeft, faCalculator, faCopy, faGripVertical, faPlus, faTrashCan, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
+import { needleOptions, yarnOptions } from './material-options';
 import {
   InstructionRepeat,
   MaterialLibrary,
@@ -9,7 +10,6 @@ import {
   NeedleKind,
   ProjectCategory,
   ProjectInput,
-  Project,
   ProjectSection,
   Yarn,
 } from './project.service';
@@ -32,20 +32,11 @@ import {
         @if (!instructionOnly) {
         <section class="form-section">
           <h3>Projekt</h3>
-          @if (!editing && projects.length) {
-            <label class="field wide-field project-duplicate-field">Anderes Projekt als Vorlage verwenden
-              <select name="duplicateProject" [ngModel]="''" (ngModelChange)="duplicateProject.emit($event)">
-                <option value="">Projekt auswählen …</option>
-                @for (project of projects; track project.id) { <option [value]="project.id">{{ project.name }}</option> }
-              </select>
-              <small>Übernimmt die Projektdaten und Anleitung, ohne den bisherigen Fortschritt.</small>
-            </label>
-          }
           <div class="form-grid">
             <label class="field wide-field">Projektname
               <input name="projectName" type="text" [(ngModel)]="draft.name" required maxlength="100" placeholder="z. B. Kuscheldecke" />
             </label>
-            <label class="field">Projektart
+            <label class="field">Art
               <select name="projectType" [(ngModel)]="draft.type">
                 <option value="knitting">Strickprojekt</option>
                 <option value="crochet">Häkelprojekt</option>
@@ -55,6 +46,15 @@ import {
               <select name="projectCategory" [(ngModel)]="draft.category">
                 @for (category of categories; track category.value) { <option [value]="category.value">{{ category.label }}</option> }
               </select>
+            </label>
+            <label class="field">Größe (optional)
+              <input name="projectSize" type="text" [(ngModel)]="draft.size" maxlength="50" placeholder="z. B. M, 38/40 oder 0–3 Monate" />
+            </label>
+            <label class="field">Designer/in der Anleitung (optional)
+              <input name="designer" type="text" [(ngModel)]="draft.designer" maxlength="100" placeholder="Name der Designerin oder des Designers" />
+            </label>
+            <label class="field">Webseite (optional)
+              <input name="websiteUrl" type="url" [(ngModel)]="draft.websiteUrl" maxlength="2048" placeholder="https://…" />
             </label>
             <div class="field image-field">
               <span>Projektbild (optional)</span>
@@ -78,12 +78,14 @@ import {
             <div><h3>Verwendete Garne</h3><p class="form-hint">Wähle zuerst die Garne für dieses Projekt; danach kannst du die Maschenprobe je Garn hinterlegen. Für jede Anweisung wird das erste ausgewählte Garn automatisch vorbelegt.</p></div>
             <button class="secondary-button" type="button" (click)="openMaterials.emit()">Materialien verwalten</button>
           </div>
-          @for (yarn of materials.yarns; track yarn.id) {
+          @for (option of projectYarnOptions; track option.key) {
             <label class="library-option">
-              <input type="checkbox" [checked]="draft.yarns.some(item => item.id === yarn.id)" (change)="yarnSelection.emit({ yarn, selected: checked($event) })" />
+              <input type="checkbox" [checked]="option.selected" (change)="yarnSelection.emit({ yarn: option.item, selected: checked($event) })" />
               <span>
-                {{ yarn.name }} · {{ yarn.brand || 'ohne Marke' }} · {{ yarn.color || 'Farbe offen' }} · Farbnummer: {{ yarn.colorCode || '–' }}
-                @if (yarn.composition.length) { · {{ compositionLabel(yarn) }} }
+                {{ option.item.name }} · {{ option.item.brand || 'ohne Marke' }} · {{ option.item.color || 'Farbe offen' }} · Farbnummer: {{ option.item.colorCode || '–' }}
+                · {{ option.item.length }} m / {{ option.item.weight }} g · {{ option.item.needleSize }} mm
+                @if (option.item.composition.length) { · {{ compositionLabel(option.item) }} }
+                @if (option.selected) { · Im Projekt }
               </span>
             </label>
           } @empty { <p class="form-hint">Lege zuerst in der Materialverwaltung mindestens ein Garn an.</p> }
@@ -130,10 +132,10 @@ import {
             <h3>Verwendete Nadeln</h3>
             <button class="secondary-button" type="button" (click)="openMaterials.emit()">Materialien verwalten</button>
           </div>
-          @for (needle of materials.needles; track needle.id) {
+          @for (option of projectNeedleOptions; track option.key) {
             <label class="library-option">
-              <input type="checkbox" [checked]="draft.needles.some(item => item.id === needle.id)" (change)="needleSelection.emit({ needle, selected: checked($event) })" />
-              <span>{{ needleName(needle) }}</span>
+              <input type="checkbox" [checked]="option.selected" (change)="needleSelection.emit({ needle: option.item, selected: checked($event) })" />
+              <span>{{ needleName(option.item) }}@if (option.selected) { · Im Projekt }</span>
             </label>
           } @empty { <p class="form-hint">Lege zuerst in der Materialverwaltung mindestens eine Nadel an.</p> }
         </section>
@@ -291,7 +293,7 @@ import {
           }
         </section>
         } @else if (!editing) {
-          <p class="form-hint editor-workflow-hint">Die Anleitung kannst du nach dem Anlegen des Projekts in den Projektdetails hinzufügen.</p>
+          <p class="form-hint editor-workflow-hint">{{ draft.sections.length || draft.instructionPdfName ? 'Die Anleitung aus der Vorlage wird übernommen und kann nach dem Anlegen bearbeitet werden.' : 'Die Anleitung kannst du nach dem Anlegen des Projekts in den Projektdetails hinzufügen.' }}</p>
         }
 
         @if (editorError) {
@@ -362,7 +364,6 @@ export class ProjectEditorComponent {
   @Input({ required: true }) needleKinds: { value: NeedleKind; label: string }[] = [];
   @Input() editing = false;
   @Input() instructionOnly = false;
-  @Input() projects: Project[] = [];
   @Input() saving = false;
   @Input() processingImage = false;
   @Input() editorError = '';
@@ -381,10 +382,16 @@ export class ProjectEditorComponent {
   @Output() duplicateSection = new EventEmitter<number>();
   @Output() duplicatePdfSection = new EventEmitter<number>();
   @Output() duplicateEntry = new EventEmitter<{ sectionIndex: number; entryIndex: number }>();
-  @Output() duplicateProject = new EventEmitter<string>();
-
   protected checked(event: Event): boolean {
     return (event.target as HTMLInputElement).checked;
+  }
+
+  protected get projectYarnOptions() {
+    return yarnOptions(this.draft.yarns, this.materials.yarns);
+  }
+
+  protected get projectNeedleOptions() {
+    return needleOptions(this.draft.needles, this.materials.needles, (needle) => this.needleName(needle));
   }
 
   protected duplicateManualSectionAndScroll(index: number): void {

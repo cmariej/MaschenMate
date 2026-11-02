@@ -1,4 +1,5 @@
 import express, { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { requireAuth } from './auth.js';
 import { projectStore } from '../storage.js';
@@ -73,10 +74,17 @@ const projectYarnSchema = z.object({
     materials.add(material);
   }
 });
-const projectInputSchema = z.object({
+export const projectInputSchema = z.object({
   type: z.enum(['crochet', 'knitting']),
   category: z.enum(['sweater', 'hat', 'scarf', 'socks', 'blanket', 'bag', 'accessory', 'other']),
   name: z.string().trim().min(1).max(100),
+  size: z.string().trim().max(50).default(''),
+  designer: z.string().trim().max(100).default(''),
+  websiteUrl: z.string().trim().max(2048).refine((value) => {
+    if (!value) return true;
+    try { return ['http:', 'https:'].includes(new URL(value).protocol); } catch { return false; }
+  }, 'Bitte gib eine gültige Webseite mit http:// oder https:// ein.').default(''),
+  sharedSource: z.boolean().default(false),
   image: z
     .string()
     .max(7_000_000)
@@ -367,6 +375,10 @@ router.put('/:projectId', async (req, res, next) => {
     const submittedProgress = req.body?.progress;
     const body = {
       ...req.body,
+      size: req.body?.size ?? previous.size ?? '',
+      designer: req.body?.designer ?? previous.designer ?? '',
+      websiteUrl: req.body?.websiteUrl ?? previous.websiteUrl ?? '',
+      sharedSource: previous.sharedSource ?? false,
       image: req.body?.image !== undefined ? req.body.image : previous.image,
       pdfSections: req.body?.pdfSections ?? previous.pdfSections ?? [],
       progress: {
@@ -456,11 +468,34 @@ router.post('/:projectId/cancel', async (req, res, next) => {
       res.status(404).json({ message: 'Projekt nicht gefunden.' });
       return;
     }
-    await recordActivity(userId, updated, 'cancelled', `${updated.id}:cancelled`);
+    await recordActivity(userId, updated, 'cancelled', `${updated.id}:cancelled:${randomUUID()}`);
     res.json({ project: updated });
   } catch (error) {
     next(error);
   }
+});
+
+router.post('/:projectId/restart', async (req, res, next) => {
+  try {
+    const userId = res.locals.authUser.id as string;
+    const project = await projectStore.find(userId, req.params.projectId);
+    if (!project) { res.status(404).json({ message: 'Projekt nicht gefunden.' }); return; }
+    if (!project.progress.cancelledAt) { res.status(409).json({ message: 'Nur abgebrochene Projekte können neu gestartet werden.' }); return; }
+    if (project.instructionMode !== 'pdf' && !project.sections.length) { res.status(400).json({ message: 'Füge zuerst mindestens einen Anleitungsabschnitt hinzu.' }); return; }
+    const timestamp = new Date().toISOString();
+    const firstSectionId = project.instructionMode === 'pdf' ? project.pdfSections[0]?.id ?? null : project.sections[0]?.id ?? null;
+    const updated = await projectStore.update(userId, project.id, {
+      ...project,
+      progress: {
+        startedAt: timestamp, cancelledAt: null, activeSectionId: firstSectionId,
+        pdfProgress: 0, completedRows: {},
+        changelog: [{ id: randomUUID(), type: 'started', timestamp, ...(firstSectionId ? { sectionId: firstSectionId } : {}) }],
+      },
+    });
+    if (!updated) { res.status(404).json({ message: 'Projekt nicht gefunden.' }); return; }
+    await recordActivity(userId, updated, 'started', `${updated.id}:restart:${randomUUID()}`);
+    res.json({ project: { ...updated, instructionPdf: null } });
+  } catch (error) { next(error); }
 });
 
 router.delete('/:projectId', async (req, res, next) => {
