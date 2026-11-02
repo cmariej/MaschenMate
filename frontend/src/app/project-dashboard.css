@@ -927,6 +927,25 @@
     grid-column: auto;
   }
 
+  .gauge-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gauge-card > strong,
+  .gauge-card label {
+    min-width: 0;
+  }
+
+  .gauge-card > strong {
+    line-height: 1.45;
+  }
+
+  .gauge-card input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
   .row-number-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

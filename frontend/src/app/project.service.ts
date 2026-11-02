@@ -75,6 +75,12 @@ export interface ProjectSection {
   needleId?: string;
 }
 
+export interface PdfSection {
+  id: string;
+  name: string;
+  rowCount: number;
+}
+
 export interface ProjectLogEntry {
   id: string;
   type: 'started' | 'section_changed' | 'row_completed' | 'row_reopened';
@@ -87,6 +93,7 @@ export interface ProjectProgress {
   startedAt: string | null;
   cancelledAt?: string | null;
   activeSectionId: string | null;
+  pdfProgress?: number;
   completedRows: Record<string, number>;
   changelog: ProjectLogEntry[];
 }
@@ -106,6 +113,7 @@ export interface ProjectInput {
   instructionMode: 'manual' | 'pdf';
   instructionPdf: string | null;
   instructionPdfName: string | null;
+  pdfSections: PdfSection[];
   sections: ProjectSection[];
   progress: ProjectProgress;
 }

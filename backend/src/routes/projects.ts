@@ -98,6 +98,11 @@ const projectInputSchema = z.object({
     .nullable()
     .default(null),
   instructionPdfName: z.string().trim().min(1).max(255).nullable().default(null),
+  pdfSections: z.array(z.object({
+    id: idSchema,
+    name: z.string().trim().min(1).max(100),
+    rowCount: z.number().int().positive().max(10_000),
+  })).max(50).default([]),
   sections: z.array(z.object({
     id: idSchema,
     name: z.string().trim().min(1).max(100),
@@ -108,6 +113,7 @@ const projectInputSchema = z.object({
     startedAt: z.string().datetime().nullable(),
     cancelledAt: z.string().datetime().nullable().optional(),
     activeSectionId: idSchema.nullable(),
+    pdfProgress: z.number().int().min(0).max(100).refine((value) => value % 10 === 0, 'Der PDF-Fortschritt muss in 10-%-Schritten angegeben werden.').default(0),
     completedRows: z.record(z.string(), z.number().int().nonnegative().max(100_000)),
     changelog: z.array(z.object({
       id: idSchema,
@@ -173,8 +179,18 @@ const projectInputSchema = z.object({
       }
     }
   }
-  if (project.progress.activeSectionId && !sectionIds.has(project.progress.activeSectionId)) {
+  const activeIds = project.instructionMode === 'pdf'
+    ? new Set(project.pdfSections.map((section) => section.id))
+    : sectionIds;
+  if (project.progress.activeSectionId && !activeIds.has(project.progress.activeSectionId)) {
     context.addIssue({ code: 'custom', path: ['progress', 'activeSectionId'], message: 'Der aktive Abschnitt existiert nicht.' });
+  }
+  const pdfSectionIds = new Set<string>();
+  for (const [index, section] of project.pdfSections.entries()) {
+    if (pdfSectionIds.has(section.id)) {
+      context.addIssue({ code: 'custom', path: ['pdfSections', index, 'id'], message: 'PDF-Abschnitts-IDs mÃ¼ssen eindeutig sein.' });
+    }
+    pdfSectionIds.add(section.id);
   }
 });
 
@@ -182,6 +198,10 @@ const router = Router();
 router.use(requireAuth);
 
 function isSectionComplete(project: ProjectInput, sectionId: string): boolean {
+  if (project.instructionMode === 'pdf') {
+    const section = project.pdfSections.find((item) => item.id === sectionId);
+    return Boolean(section && (project.progress.completedRows[sectionId] ?? 0) >= section.rowCount);
+  }
   const section = project.sections.find((item) => item.id === sectionId);
   if (!section || section.entries.length === 0) return false;
   const lastRow = section.entries.reduce((last, entry) => Math.max(last, entry.toRow), 0);
@@ -189,6 +209,11 @@ function isSectionComplete(project: ProjectInput, sectionId: string): boolean {
 }
 
 function isProjectComplete(project: ProjectInput): boolean {
+  if (project.instructionMode === 'pdf') {
+    return project.pdfSections.length
+      ? project.pdfSections.every((section) => (project.progress.completedRows[section.id] ?? 0) >= section.rowCount)
+      : (project.progress.pdfProgress ?? 0) >= 100;
+  }
   return project.sections.length > 0 && project.sections.every((section) => isSectionComplete(project, section.id));
 }
 
@@ -295,6 +320,7 @@ router.put('/:projectId', async (req, res, next) => {
     const submittedProgress = req.body?.progress;
     const body = {
       ...req.body,
+      pdfSections: req.body?.pdfSections ?? previous.pdfSections ?? [],
       progress: {
         ...previous.progress,
         ...(submittedProgress && typeof submittedProgress === 'object' ? submittedProgress : {}),
@@ -335,7 +361,10 @@ router.put('/:projectId', async (req, res, next) => {
     if (!previous.progress.startedAt && project.progress.startedAt) {
       await recordActivity(userId, project, 'started', `${project.id}:started`);
     }
-    for (const section of project.sections) {
+    const progressSections = project.instructionMode === 'pdf'
+      ? project.pdfSections
+      : project.sections;
+    for (const section of progressSections) {
       if (!isSectionComplete(previous, section.id) && isSectionComplete(project, section.id)) {
         await recordActivity(
           userId,

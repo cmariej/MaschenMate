@@ -222,6 +222,26 @@ import {
                 <p class="form-hint">Lade eine PDF-Datei hoch, um die manuelle Eingabe zu ersetzen.</p>
               }
             </div>
+            <div class="pdf-sections-editor">
+              <div>
+                <h4>Abschnitte für den Fortschritt (optional)</h4>
+                <p class="form-hint">Lege nur Namen und Reihenanzahl fest. Der Projektfortschritt wird dann anhand der erledigten Reihen berechnet.</p>
+              </div>
+              @for (section of draft.pdfSections; track section.id; let sectionIndex = $index) {
+                <div class="pdf-section-row">
+                  <label class="field">Abschnittsname
+                    <input [name]="'pdf-section-name-' + sectionIndex" [(ngModel)]="section.name" required maxlength="100" placeholder="z. B. Rückenteil" />
+                  </label>
+                  <label class="field">Reihen
+                    <input [name]="'pdf-section-rows-' + sectionIndex" type="number" min="1" max="10000" step="1" [(ngModel)]="section.rowCount" required />
+                  </label>
+                  <button class="remove-button" type="button" (click)="removePdfSection(sectionIndex)">Entfernen</button>
+                </div>
+              } @empty {
+                <p class="form-hint">Ohne Abschnitte kannst du den Fortschritt manuell in 10-%-Schritten setzen.</p>
+              }
+              <button class="secondary-button inline-icon-action add-section-button" type="button" (click)="addPdfSection()"><app-fa-icon [icon]="faPlus" /> PDF-Abschnitt hinzufügen</button>
+            </div>
           }
         </section>
 
@@ -241,6 +261,15 @@ import {
 export class ProjectEditorComponent {
   protected readonly faArrowLeft = faArrowLeft;
   protected readonly faPlus = faPlus;
+
+  protected addPdfSection(): void {
+    this.draft.pdfSections ??= [];
+    this.draft.pdfSections.push({ id: crypto.randomUUID(), name: '', rowCount: 1 });
+  }
+
+  protected removePdfSection(index: number): void {
+    this.draft.pdfSections.splice(index, 1);
+  }
 
   @Input({ required: true }) draft!: ProjectInput;
   @Input({ required: true }) materials!: MaterialLibrary;

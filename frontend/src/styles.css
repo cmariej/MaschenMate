@@ -26,6 +26,17 @@ input {
   font: inherit;
 }
 
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 .authenticated-header {
   position: relative;
   z-index: 3;
@@ -146,6 +157,12 @@ main.shell > .account-panel.legal-app {
   margin: 12px 0 10px;
 }
 
+.row-counter-edit {
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 16px;
+}
+
 .row-counter strong {
   min-width: 90px;
   color: #6a4e66;
@@ -171,6 +188,126 @@ main.shell > .account-panel.legal-app {
 .row-counter button:disabled {
   cursor: not-allowed;
   opacity: .4;
+}
+
+.pdf-progress-dashboard {
+  display: grid;
+  width: min(100%, 360px);
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.pdf-progress-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pdf-progress-stepper strong {
+  color: #6a4e66;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(40px, 8vw, 58px);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.pdf-progress-stepper button {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid #e5d7e0;
+  border-radius: 10px;
+  background: #fff;
+  color: #765d70;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.pdf-progress-stepper button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.pdf-progress-hint {
+  margin: 0;
+  color: #897d83;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.row-counter .row-number-button {
+  width: auto;
+  min-width: 90px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #6a4e66;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(54px, 10vw, 78px);
+  line-height: 1;
+}
+
+.row-counter .row-number-button:disabled {
+  opacity: 1;
+}
+
+.row-number-edit {
+  width: min(170px, 38vw);
+}
+
+.row-number-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.row-number-edit input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #e8dbe5;
+  border-radius: 10px;
+  color: #6a4e66;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(38px, 8vw, 58px);
+  text-align: center;
+}
+
+.row-counter .row-counter-action {
+  width: auto;
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 9px;
+  background: linear-gradient(100deg, #927096, #b57892);
+  color: #fff;
+  font-size: 11px;
+}
+
+.row-counter .secondary-row-action {
+  border-color: #e5d7e0;
+  background: #fff;
+  color: #765d70;
+  font-size: 11px;
+}
+
+.row-number-help,
+.row-number-error {
+  flex-basis: 100%;
+  font-size: 11px;
+}
+
+.row-number-help {
+  color: #897d83;
+}
+
+.row-number-error {
+  color: #a3443c;
 }
 
 .current-progress-metrics {
@@ -203,6 +340,74 @@ main.shell > .account-panel.legal-app {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 12px;
+}
+
+.pdf-sections-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid #efe5ea;
+  border-radius: 11px;
+  background: #fffdfd;
+}
+
+.pdf-sections-editor h4 {
+  margin: 0 0 4px;
+  color: #634c60;
+  font-size: 12px;
+}
+
+.pdf-section-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, .35fr) auto;
+  align-items: end;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #eee3e9;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.pdf-section-row .remove-button {
+  min-height: 36px;
+}
+
+.needle-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.needle-grid > .empty-state {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .needle-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .needle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .needle-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .pdf-section-row {
+    grid-template-columns: minmax(0, 1fr) minmax(90px, .45fr);
+  }
+
+  .pdf-section-row .remove-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
 }
 
 .material-preview {

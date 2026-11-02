@@ -53,6 +53,246 @@
   overflow-wrap: anywhere;
 }
 
+.progress-card {
+  padding: 18px;
+  border-color: #e8d8e2;
+  background: linear-gradient(145deg, #fff, #fbf5f8);
+  box-shadow: 0 8px 24px rgb(87 63 77 / 6%);
+}
+
+.progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.progress-eyebrow,
+.next-row-label {
+  color: #a56d56;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+}
+
+.progress-heading h3 {
+  margin: 3px 0 0;
+  color: #563c50;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.progress-badge {
+  display: grid;
+  min-width: 54px;
+  min-height: 42px;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid #eadde5;
+  border-radius: 13px;
+  background: #fff;
+  color: #805d7c;
+  font-size: 17px;
+}
+
+.progress-card > .progress-track {
+  height: 9px;
+  margin-bottom: 17px;
+}
+
+.active-section-progress {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-card .section-picker {
+  margin-top: 0;
+  color: #756773;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.progress-card .section-picker select {
+  min-height: 48px;
+  padding: 10px 12px;
+  border-color: #e4d5de;
+  background-color: #fff;
+  font-size: 13px;
+}
+
+.section-progress-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #897d83;
+  font-size: 11px;
+}
+
+.section-progress-summary strong {
+  color: #685363;
+  font-size: 11px;
+}
+
+.section-progress-track {
+  height: 6px;
+  margin-top: -5px;
+}
+
+.pdf-section-progress-list {
+  display: grid;
+  gap: 7px;
+}
+
+.pdf-section-progress-item {
+  display: grid;
+  width: 100%;
+  gap: 7px;
+  padding: 10px 11px;
+  border: 1px solid #eee1e7;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pdf-section-progress-item.active {
+  border-color: #bd9ab4;
+  background: #fcf7fa;
+  box-shadow: 0 0 0 2px rgb(185 142 170 / 10%);
+}
+
+.pdf-section-progress-item:focus-visible {
+  outline: 3px solid #b98eaa;
+  outline-offset: 2px;
+}
+
+.pdf-section-progress-item:disabled {
+  cursor: not-allowed;
+  opacity: .7;
+}
+
+.pdf-section-progress-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.pdf-section-progress-heading strong {
+  overflow: hidden;
+  color: #594958;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.pdf-section-progress-heading > span {
+  color: #897d83;
+  font-size: 10px;
+}
+
+.pdf-section-progress-heading b {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: #805d7c;
+  font-size: 12px;
+}
+
+.pdf-section-progress-item .progress-track {
+  height: 5px;
+}
+
+.progress-card .next-row {
+  align-items: center;
+  margin: 2px 0 0;
+  padding: 13px;
+  border: 1px solid #eee1e7;
+  border-radius: 11px;
+  background: rgb(255 255 255 / 85%);
+}
+
+.progress-card .next-row > div {
+  gap: 5px;
+}
+
+.progress-card .next-row strong {
+  color: #594958;
+  font-size: 14px;
+}
+
+.progress-card .next-row strong small {
+  color: #897d83;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.progress-card .next-row span:last-child {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.progress-card .small-button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  border-color: #8d6a8a;
+  background: linear-gradient(100deg, #927096, #b57892);
+  box-shadow: 0 4px 11px rgb(151 109 145 / 15%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.progress-card .complete-section-button {
+  justify-self: start;
+  margin-top: 2px;
+  border-color: #e5d7e0;
+  background: #fff;
+  box-shadow: none;
+  color: #765d70;
+}
+
+.progress-card .small-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.section-done-note,
+.progress-empty-state p {
+  margin: 2px 0;
+  color: #897d83;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.progress-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pdf-progress-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.pdf-progress-controls > p:first-child {
+  margin: 0;
+  color: #756773;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.pdf-progress-controls .pdf-progress-stepper {
+  max-width: 360px;
+  margin: 6px 0;
+}
+
 .project-status {
   margin: 12px 0 0;
   font-size: 13px;

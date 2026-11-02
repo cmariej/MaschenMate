@@ -88,8 +88,15 @@ export interface ProjectProgress {
   startedAt: string | null;
   cancelledAt?: string | null;
   activeSectionId: string | null;
+  pdfProgress: number;
   completedRows: Record<string, number>;
   changelog: ProjectLogEntry[];
+}
+
+export interface PdfSection {
+  id: string;
+  name: string;
+  rowCount: number;
 }
 
 export interface ProjectInput {
@@ -107,6 +114,7 @@ export interface ProjectInput {
   instructionMode: 'manual' | 'pdf';
   instructionPdf: string | null;
   instructionPdfName: string | null;
+  pdfSections: PdfSection[];
   sections: ProjectSection[];
   progress: ProjectProgress;
 }
@@ -143,10 +151,12 @@ export function normalizeStoredProject(project: Project): Project {
     instructionMode: legacy.instructionMode ?? 'manual',
     instructionPdf: legacy.instructionPdf ?? null,
     instructionPdfName: legacy.instructionPdfName ?? null,
+    pdfSections: legacy.pdfSections ?? [],
     progress: {
       startedAt: progress.startedAt ?? null,
       cancelledAt: progress.cancelledAt ?? null,
       activeSectionId: progress.activeSectionId ?? null,
+      pdfProgress: progress.pdfProgress ?? 0,
       completedRows: progress.completedRows ?? {},
       changelog: progress.changelog ?? [],
     },

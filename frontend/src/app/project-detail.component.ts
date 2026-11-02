@@ -36,30 +36,61 @@ interface YarnUsage {
       </header>
       @if (project.image) { <img class="detail-project-image" [src]="project.image" [alt]="'Bild für ' + project.name" /> }
       <div class="detail-content">
-        <div class="detail-block">
-          <h4>{{ project.instructionMode === 'pdf' ? 'Fortschritt' : 'Fortschritt ' + progress + '%' }}</h4>
-          @if (project.instructionMode !== 'pdf') {
-          <div class="progress-track"><span [style.width.%]="progress"></span></div>
-          }
-          @if (project.instructionMode === 'pdf') {
-            <p class="project-status">Die Reihenverfolgung ist bei PDF-Anleitungen nicht verfügbar.</p>
-          } @else if (project.progress.cancelledAt) {
+        <section class="detail-block progress-card" aria-labelledby="progress-title">
+          <header class="progress-heading">
+            <div><span class="progress-eyebrow">Dein Projekt</span><h3 id="progress-title">Fortschritt</h3></div>
+            <strong class="progress-badge">{{ progress }}%</strong>
+          </header>
+          <div class="progress-track" role="progressbar" aria-label="Gesamtfortschritt des Projekts" [attr.aria-valuenow]="progress" aria-valuemin="0" aria-valuemax="100"><span [style.width.%]="progress"></span></div>
+          @if (project.progress.cancelledAt) {
             <p class="project-status cancelled-status">Projekt abgebrochen · {{ formatDate(project.progress.cancelledAt) }}</p>
           } @else if (completed) {
             <p class="project-status finished-status">Projekt fertiggestellt</p>
           } @else if (!project.progress.startedAt) {
-            <button class="small-button" type="button" [disabled]="busy" (click)="start.emit()">Projekt starten</button>
-          } @else {
-            <label class="section-picker">Aktueller Abschnitt
-              <select [name]="'detail-section-' + project.id" [(ngModel)]="project.progress.activeSectionId" (ngModelChange)="sectionChange.emit()" [disabled]="busy">
-                @for (section of project.sections; track section.id) { <option [ngValue]="section.id">{{ section.name }}</option> }
-              </select>
-            </label>
-            @if (nextRow; as row) {
-              <div class="next-row"><div><strong>Nächste Reihe {{ row.number }}</strong><span>{{ row.stitches }} Maschen · {{ row.instructions }}</span></div>
-                <button class="small-button" type="button" [disabled]="busy" (click)="completeRow.emit()">Reihe fertig</button>
+            <div class="progress-empty-state"><p>Starte das Projekt, um den Fortschritt zu verfolgen.</p><button class="small-button start-project-button" type="button" [disabled]="busy" (click)="start.emit()">Projekt starten</button></div>
+          } @else if (project.instructionMode === 'pdf' && project.pdfSections.length === 0) {
+            <div class="pdf-progress-controls">
+              <p>PDF-Anleitung: Fortschritt in 10-%-Schritten</p>
+              <div class="pdf-progress-stepper">
+                <button type="button" aria-label="PDF-Fortschritt um 10 Prozent verringern" [disabled]="busy || (project.progress.pdfProgress ?? 0) === 0" (click)="pdfProgressChange.emit(-10)">-10%</button>
+                <strong>{{ project.progress.pdfProgress ?? 0 }}%</strong>
+                <button type="button" aria-label="PDF-Fortschritt steigern" [disabled]="busy || (project.progress.pdfProgress ?? 0) === 100" (click)="pdfProgressChange.emit(10)">+10%</button>
               </div>
-            }
+              <p class="pdf-progress-hint">Bei 100 % wird das Projekt als fertiggestellt markiert.</p>
+            </div>
+          } @else {
+            <div class="active-section-progress">
+              @if (project.instructionMode === 'pdf') {
+                <div class="pdf-section-progress-list" aria-label="Fortschritt der PDF-Abschnitte">
+                  @for (section of progressSections; track section.id) {
+                    <button class="pdf-section-progress-item" type="button" [class.active]="project.progress.activeSectionId === section.id" [disabled]="busy" (click)="chooseProgressSection(section.id)">
+                      <span class="pdf-section-progress-heading"><strong>{{ section.name }}</strong><span>{{ sectionCompletedRowsFor(section) }} / {{ sectionRowCountFor(section) }} Reihen</span><b>{{ sectionProgress[section.id] ?? 0 }}%</b></span>
+                      <span class="progress-track" aria-hidden="true"><span [style.width.%]="sectionProgress[section.id] ?? 0"></span></span>
+                    </button>
+                  }
+                </div>
+              } @else {
+                <label class="section-picker">Aktueller Abschnitt
+                  <select [name]="'detail-section-' + project.id" [(ngModel)]="project.progress.activeSectionId" (ngModelChange)="sectionChange.emit()" [disabled]="busy">
+                    @for (section of progressSections; track section.id) { <option [ngValue]="section.id">{{ section.name }} · {{ sectionProgress[section.id] ?? 0 }}%</option> }
+                  </select>
+                </label>
+                @if (activeSection; as section) {
+                  <div class="section-progress-summary"><span>Abschnittsfortschritt</span><strong>{{ sectionCompletedRows }} / {{ sectionRowCount }} Reihen</strong></div>
+                  <div class="progress-track section-progress-track" role="progressbar" [attr.aria-label]="'Fortschritt Abschnitt ' + section.name" [attr.aria-valuenow]="sectionProgress[section.id] ?? 0" aria-valuemin="0" aria-valuemax="100"><span [style.width.%]="sectionProgress[section.id] ?? 0"></span></div>
+                }
+              }
+              @if (nextRow; as row) {
+                <div class="next-row"><div><span class="next-row-label">Als Nächstes</span><strong>Reihe {{ row.number }} <small>· {{ row.stitches }} Maschen</small></strong>@if (project.instructionMode !== 'pdf') { <span>{{ row.instructions }}</span> }</div>
+                  <button class="small-button" type="button" [disabled]="busy" (click)="completeRow.emit()">Reihe fertig</button>
+                </div>
+              } @else {
+                <p class="section-done-note">Dieser Abschnitt ist abgeschlossen.</p>
+              }
+              <button class="small-button complete-section-button" type="button" [disabled]="busy || !nextRow" (click)="completeSection.emit()">Abschnitt abschließen</button>
+            </div>
+          }
+          @if (project.progress.startedAt && !project.progress.cancelledAt && !completed) {
             @if (cancelPending) {
               <div class="cancel-confirm">
                 <span>Projekt wirklich abbrechen?</span>
@@ -70,7 +101,7 @@ interface YarnUsage {
               <button class="cancel-project-link" type="button" [disabled]="busy" (click)="cancelPending = true">Projekt abbrechen</button>
             }
           }
-        </div>
+        </section>
         @if (project.yarns.length) {
           <section class="detail-block yarn-usage-block" aria-labelledby="yarn-usage-title">
             <h4 id="yarn-usage-title">Garnverbrauch</h4>
@@ -197,6 +228,7 @@ export class ProjectDetailComponent implements OnChanges {
   @Input() completed = false;
   @Input() busy = false;
   @Input() nextRow: ProjectDetailRow | null = null;
+  @Input() progressSections: Project['sections'] = [];
   @Input() sectionProgress: Record<string, number> = {};
   @Input() sectionNeedles: Record<string, string> = {};
   @Input() yarnInventory: Yarn[] = [];
@@ -206,10 +238,38 @@ export class ProjectDetailComponent implements OnChanges {
   @Output() start = new EventEmitter<void>();
   @Output() sectionChange = new EventEmitter<void>();
   @Output() completeRow = new EventEmitter<void>();
+  @Output() completeSection = new EventEmitter<void>();
+  @Output() pdfProgressChange = new EventEmitter<-10 | 10>();
   @Output() cancel = new EventEmitter<void>();
   @Output() remove = new EventEmitter<void>();
   protected deletePending = false;
   protected cancelPending = false;
+
+  protected get activeSection(): Project['sections'][number] | null {
+    return this.progressSections.find((section) => section.id === this.project.progress.activeSectionId) ?? null;
+  }
+
+  protected get sectionRowCount(): number {
+    return this.activeSection?.entries.reduce((total, entry) => total + Math.max(0, entry.toRow - entry.fromRow + 1), 0) ?? 0;
+  }
+
+  protected get sectionCompletedRows(): number {
+    const section = this.activeSection;
+    return section ? Math.min(this.sectionRowCount, this.project.progress.completedRows[section.id] ?? 0) : 0;
+  }
+
+  protected sectionRowCountFor(section: Project['sections'][number]): number {
+    return section.entries.reduce((total, entry) => total + Math.max(0, entry.toRow - entry.fromRow + 1), 0);
+  }
+
+  protected sectionCompletedRowsFor(section: Project['sections'][number]): number {
+    return Math.min(this.sectionRowCountFor(section), this.project.progress.completedRows[section.id] ?? 0);
+  }
+
+  protected chooseProgressSection(sectionId: string): void {
+    this.project.progress.activeSectionId = sectionId;
+    this.sectionChange.emit();
+  }
 
   ngOnChanges(): void {
     if (this.project?.instructionMode !== 'pdf') {

@@ -51,6 +51,7 @@ export class ProjectDashboard implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectService = inject(ProjectService);
+  private readonly progressSectionCache = new WeakMap<Project, ProjectSection[]>();
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   protected projects: Project[] = [];
@@ -60,6 +61,9 @@ export class ProjectDashboard implements OnInit {
   protected feedError = '';
   protected feedLoading = true;
   protected feedActivities: FeedActivity[] = [];
+  protected editingCurrentRow = false;
+  protected currentRowInput: number | null = null;
+  protected currentRowInputError = '';
   protected editorError = '';
   protected busyProjectId = '';
   protected editingId: string | null = null;
@@ -153,14 +157,14 @@ export class ProjectDashboard implements OnInit {
 
   protected get currentSection(): ProjectSection | null {
     const project = this.currentProject;
-    return project?.sections.find((section) => section.id === project.progress.activeSectionId) ?? null;
+    return project ? this.progressSection(project, project.progress.activeSectionId) : null;
   }
 
   protected get currentRowNumber(): number {
     const project = this.currentProject;
     const section = this.currentSection;
     if (!project || !section) return 0;
-    return this.currentRow(project)?.number ?? this.sectionRows(section).length;
+    return this.currentRow(project)?.number ?? this.sectionRows(section).length + 1;
   }
 
   protected get completedCurrentRows(): number {
@@ -489,7 +493,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected changeCurrentRow(project: Project, delta: -1 | 1): void {
-    const section = project.sections.find((item) => item.id === project.progress.activeSectionId);
+    const section = this.progressSection(project, project.progress.activeSectionId);
     if (!section) return;
     const completed = project.progress.completedRows[section.id] ?? 0;
     const rows = this.sectionRows(section);
@@ -507,6 +511,66 @@ export class ProjectDashboard implements OnInit {
         rowNumber,
       });
     }
+    this.saveProgress(next);
+  }
+
+  protected editCurrentRowNumber(): void {
+    this.currentRowInput = this.currentRowNumber;
+    this.currentRowInputError = '';
+    this.editingCurrentRow = true;
+  }
+
+  protected cancelCurrentRowEdit(): void {
+    this.editingCurrentRow = false;
+    this.currentRowInput = null;
+    this.currentRowInputError = '';
+  }
+
+  protected saveCurrentRowNumber(project: Project): void {
+    const section = this.progressSection(project, project.progress.activeSectionId);
+    const requestedRow = this.currentRowInput;
+    if (!section || requestedRow === null || !Number.isInteger(requestedRow)) {
+      this.currentRowInputError = 'Bitte gib eine ganze Reihennummer ein.';
+      return;
+    }
+    const rows = this.sectionRows(section);
+    const maxNextRow = rows.length + 1;
+    if (requestedRow < 1 || requestedRow > maxNextRow) {
+      this.currentRowInputError = `Gib eine Zahl zwischen 1 und ${maxNextRow} ein.`;
+      return;
+    }
+    const completed = project.progress.completedRows[section.id] ?? 0;
+    const nextCompleted = requestedRow - 1;
+    if (completed !== nextCompleted) {
+      const next = structuredClone(project);
+      next.progress.completedRows[section.id] = nextCompleted;
+      next.progress.changelog.push({
+        id: this.createId(),
+        type: nextCompleted > completed ? 'row_completed' : 'row_reopened',
+        timestamp: new Date().toISOString(),
+        sectionId: section.id,
+        rowNumber: rows[nextCompleted > completed ? nextCompleted - 1 : nextCompleted]?.number,
+      });
+      this.saveProgress(next);
+    }
+    this.cancelCurrentRowEdit();
+  }
+
+  protected completeCurrentSection(project: Project): void {
+    const section = this.progressSection(project, project.progress.activeSectionId);
+    if (!section) return;
+    const rows = this.sectionRows(section);
+    const completed = project.progress.completedRows[section.id] ?? 0;
+    if (completed >= rows.length) return;
+    const next = structuredClone(project);
+    next.progress.completedRows[section.id] = rows.length;
+    next.progress.changelog.push({
+      id: this.createId(),
+      type: 'row_completed',
+      timestamp: new Date().toISOString(),
+      sectionId: section.id,
+      rowNumber: rows[rows.length - 1]?.number,
+    });
     this.saveProgress(next);
   }
 
@@ -700,8 +764,15 @@ export class ProjectDashboard implements OnInit {
   protected saveProject(): void {
     this.editorError = '';
     this.draft.progress ??= { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] };
+    this.draft.progress.pdfProgress ??= 0;
     this.draft.progress.completedRows ??= {};
     this.draft.progress.changelog ??= [];
+    this.draft.pdfSections ??= [];
+    if (this.draft.instructionMode === 'pdf' && this.draft.pdfSections.length) this.draft.progress.pdfProgress = 0;
+    const progressSections = this.draft.instructionMode === 'pdf' ? this.draft.pdfSections : this.draft.sections;
+    if (!progressSections.some((section) => section.id === this.draft.progress.activeSectionId)) {
+      this.draft.progress.activeSectionId = progressSections[0]?.id ?? null;
+    }
     const validationError = this.validateProjectDraft();
     if (validationError) {
       this.editorError = validationError;
@@ -737,7 +808,7 @@ export class ProjectDashboard implements OnInit {
     if (!project.name?.trim() || project.name.trim().length > 100) return 'Bitte gib einen Projektnamen mit höchstens 100 Zeichen ein.';
     if (!['knitting', 'crochet'].includes(project.type)) return 'Bitte wähle eine gültige Projektart aus.';
     if (!this.categories.some((category) => category.value === project.category)) return 'Bitte wähle eine gültige Kategorie aus.';
-    if (project.yarns.length > 30 || project.needles.length > 30 || project.sections.length > 50) return 'Das Projekt enthält mehr Materialien oder Abschnitte als erlaubt.';
+    if (project.yarns.length > 30 || project.needles.length > 30 || project.sections.length > 50 || project.pdfSections.length > 50) return 'Das Projekt enthält mehr Materialien oder Abschnitte als erlaubt.';
     if (project.image && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(project.image)) return 'Das Projektbild hat ein ungültiges Format. Bitte wähle es erneut aus.';
 
     for (const yarn of project.yarns) {
@@ -761,6 +832,13 @@ export class ProjectDashboard implements OnInit {
     if (project.instructionMode === 'pdf') {
       if ((!project.instructionPdf && !this.editingId) || (project.instructionPdf && !project.instructionPdf.startsWith('data:application/pdf;base64,JVBERi0'))) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
       if (!project.instructionPdfName?.trim() || project.instructionPdfName.length > 255) return 'Der Dateiname der PDF-Anleitung ist ungültig.';
+      const pdfSectionIds = new Set<string>();
+      for (const section of project.pdfSections) {
+        if (!section.id || pdfSectionIds.has(section.id)) return 'Jeder PDF-Abschnitt braucht eine eindeutige Kennung.';
+        pdfSectionIds.add(section.id);
+        if (!section.name.trim() || section.name.trim().length > 100) return 'Bitte gib jedem PDF-Abschnitt einen Namen mit höchstens 100 Zeichen.';
+        if (!Number.isInteger(section.rowCount) || section.rowCount < 1 || section.rowCount > 10_000) return `Bitte gib für „${section.name}“ eine Reihenanzahl zwischen 1 und 10.000 ein.`;
+      }
     } else {
       if (project.sections.length === 0) return 'Bitte füge mindestens einen Abschnitt mit einer Anleitung hinzu.';
       const sectionIds = new Set<string>();
@@ -791,8 +869,10 @@ export class ProjectDashboard implements OnInit {
       }
     }
 
-    if (project.progress.activeSectionId && !project.sections.some((section) => section.id === project.progress.activeSectionId)) return 'Der aktive Anleitungsabschnitt ist nicht mehr vorhanden.';
+    if (project.progress.activeSectionId && !this.trackingSections(project).some((section) => section.id === project.progress.activeSectionId)) return 'Der aktive Anleitungsabschnitt ist nicht mehr vorhanden.';
     if (Object.values(project.progress.completedRows).some((rows) => !Number.isInteger(rows) || rows < 0 || rows > 100_000)) return 'Der gespeicherte Reihenfortschritt ist ungültig.';
+    const pdfProgress = project.progress.pdfProgress ?? 0;
+    if (!Number.isInteger(pdfProgress) || pdfProgress < 0 || pdfProgress > 100 || pdfProgress % 10 !== 0) return 'Der PDF-Fortschritt muss zwischen 0 und 100 % in 10-%-Schritten liegen.';
     if (project.progress.changelog.length > 500) return 'Das Projekt enthält zu viele Fortschrittseinträge. Bitte lade die Seite neu.';
     return null;
   }
@@ -803,20 +883,35 @@ export class ProjectDashboard implements OnInit {
 
   protected startProject(project: Project): void {
     if (project.progress.cancelledAt) return;
-    if (!project.sections.length) {
+    if (project.instructionMode !== 'pdf' && !project.sections.length) {
       this.error = 'Füge zuerst mindestens einen Anleitungsabschnitt hinzu.';
       return;
     }
     const next = structuredClone(project);
     const timestamp = new Date().toISOString();
     next.progress.startedAt = timestamp;
-    next.progress.activeSectionId ??= next.sections[0].id;
+    if (next.instructionMode === 'pdf') {
+      const firstSectionId = next.pdfSections[0]?.id ?? null;
+      if (!next.pdfSections.some((section) => section.id === next.progress.activeSectionId)) next.progress.activeSectionId = firstSectionId;
+    } else {
+      next.progress.activeSectionId ??= next.sections[0].id;
+    }
     next.progress.changelog.push({
       id: this.createId(),
       type: 'started',
       timestamp,
       sectionId: next.progress.activeSectionId ?? undefined,
     });
+    this.saveProgress(next);
+  }
+
+  protected changePdfProgress(project: Project, delta: -10 | 10): void {
+    if (project.instructionMode !== 'pdf' || project.pdfSections.length > 0 || !project.progress.startedAt || project.progress.cancelledAt) return;
+    const current = project.progress.pdfProgress ?? 0;
+    const updated = Math.max(0, Math.min(100, current + delta));
+    if (updated === current) return;
+    const next = structuredClone(project);
+    next.progress.pdfProgress = updated;
     this.saveProgress(next);
   }
 
@@ -835,7 +930,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected completeNextRow(project: Project): void {
-    const section = project.sections.find((item) => item.id === project.progress.activeSectionId);
+    const section = this.progressSection(project, project.progress.activeSectionId);
     if (!section) return;
     const rows = this.sectionRows(section);
     const completed = project.progress.completedRows[section.id] ?? 0;
@@ -913,6 +1008,15 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected progressPercent(project: Project): number {
+    if (project.instructionMode === 'pdf') {
+      if (!project.pdfSections.length) return project.progress.pdfProgress ?? 0;
+      const totalRows = project.pdfSections.reduce((total, section) => total + section.rowCount, 0);
+      const completedRows = project.pdfSections.reduce(
+        (total, section) => total + Math.min(section.rowCount, project.progress.completedRows[section.id] ?? 0),
+        0,
+      );
+      return totalRows ? Math.round(completedRows / totalRows * 100) : 0;
+    }
     let totalStitches = 0;
     let completedStitches = 0;
     for (const section of project.sections) {
@@ -937,23 +1041,28 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected currentRow(project: Project): ExpandedRow | null {
-    const section = project.sections.find((item) => item.id === project.progress.activeSectionId);
+    const section = this.progressSection(project, project.progress.activeSectionId);
     if (!section) return null;
     return this.sectionRows(section)[project.progress.completedRows[section.id] ?? 0] ?? null;
   }
 
   protected projectCompleted(project: Project): boolean {
+    if (project.instructionMode === 'pdf') {
+      return project.pdfSections.length
+        ? project.pdfSections.every((section) => (project.progress.completedRows[section.id] ?? 0) >= section.rowCount)
+        : (project.progress.pdfProgress ?? 0) >= 100;
+    }
     return project.sections.length > 0 && project.sections.every(
       (section) => this.sectionCompletedRows(project, section) >= this.sectionRows(section).length,
     );
   }
 
   protected sectionProgressMap(project: Project): Record<string, number> {
-    return Object.fromEntries(project.sections.map((section) => [section.id, this.sectionPercent(project, section)]));
+    return Object.fromEntries(this.trackingSections(project).map((section) => [section.id, this.sectionPercent(project, section)]));
   }
 
   protected sectionNeedlesMap(project: Project): Record<string, string> {
-    return Object.fromEntries(project.sections.map((section) => [section.id, this.needleNameById(section.needleId, project.needles)]));
+    return Object.fromEntries(this.trackingSections(project).map((section) => [section.id, this.needleNameById(section.needleId, project.needles)]));
   }
 
   protected categoryName(category: ProjectCategory | undefined): string {
@@ -988,6 +1097,32 @@ export class ProjectDashboard implements OnInit {
   protected needleNameById(needleId: string | undefined, needles: Needle[] = this.draft.needles): string {
     const needle = needles.find((item) => item.id === needleId);
     return needle ? this.needleName(needle) : 'Keine Nadel ausgewählt';
+  }
+
+  protected trackingSections(project: Project | ProjectInput): ProjectSection[] {
+    if (project.instructionMode !== 'pdf') return project.sections;
+    if ('id' in project) {
+      const cached = this.progressSectionCache.get(project);
+      if (cached) return cached;
+    }
+    const sections = project.pdfSections.map((section) => ({
+      id: section.id,
+      name: section.name,
+      entries: [{
+        id: section.id,
+        type: 'range' as const,
+        fromRow: 1,
+        toRow: section.rowCount,
+        instructions: 'PDF-Reihe',
+        stitchesPerRow: 1,
+      }],
+    }));
+    if ('id' in project) this.progressSectionCache.set(project, sections);
+    return sections;
+  }
+
+  private progressSection(project: Project, sectionId: string | null): ProjectSection | null {
+    return this.trackingSections(project).find((section) => section.id === sectionId) ?? null;
   }
 
   protected sectionRows(section: ProjectSection): ExpandedRow[] {
@@ -1053,6 +1188,8 @@ export class ProjectDashboard implements OnInit {
       instructionMode: legacy.instructionMode ?? 'manual',
       instructionPdf: legacy.instructionPdf ?? null,
       instructionPdfName: legacy.instructionPdfName ?? null,
+      pdfSections: legacy.pdfSections ?? [],
+      progress: { ...legacy.progress, pdfProgress: legacy.progress.pdfProgress ?? 0 },
       yarns: legacy.yarns.map((yarn) => this.normalizeProjectYarn(yarn)),
       sections: legacy.sections.map((section) => ({
         ...section,
@@ -1080,8 +1217,9 @@ export class ProjectDashboard implements OnInit {
       instructionMode: 'manual',
       instructionPdf: null,
       instructionPdfName: null,
+      pdfSections: [],
       sections: [],
-      progress: { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] },
+      progress: { startedAt: null, activeSectionId: null, pdfProgress: 0, completedRows: {}, changelog: [] },
     };
   }
 
