@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Injector, Input, Output, afterNextRender, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { faArrowLeft, faCalculator, faCopy, faGripVertical, faPlus, faTrashCan, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIconComponent } from './fontawesome-icon.component';
@@ -154,7 +154,7 @@ import {
           @if (draft.instructionMode === 'manual') {
           <p class="form-hint">Jeder Eintrag steht für eine Reihe oder einen zusammenhängenden Reihenabschnitt mit gleicher Maschenzahl und Anweisung. Teile den Abschnitt auf, wenn sich Maschenzahl, Text oder Garn ändert. Eine Wiederholung bildet einen wechselnden Reihenzyklus wie rechts/links ab.</p>
           @for (section of draft.sections; track section.id; let sectionIndex = $index) {
-            <details class="section-editor" [open]="openManualSectionId === section.id" (toggle)="onManualSectionToggle($event, section.id)" [attr.data-sortable-kind]="'manual'" [attr.data-sortable-index]="sectionIndex" [class.section-insert-before]="isSectionInsert(sectionIndex, 'manual', 'before')" [class.section-insert-after]="isSectionInsert(sectionIndex, 'manual', 'after')">
+            <details class="section-editor" [open]="openManualSectionId === section.id" (toggle)="onManualSectionToggle($event, section.id)" [attr.data-section-id]="section.id" [attr.data-sortable-kind]="'manual'" [attr.data-sortable-index]="sectionIndex" [class.section-insert-before]="isSectionInsert(sectionIndex, 'manual', 'before')" [class.section-insert-after]="isSectionInsert(sectionIndex, 'manual', 'after')">
               <summary class="disclosure-summary section-editor-summary">
                 <span class="section-drag-handle" [class.drag-disabled]="openManualSectionId === section.id" role="button" tabindex="0" [attr.aria-disabled]="openManualSectionId === section.id" aria-label="Abschnitt verschieben. Mit Pfeiltasten sortieren." [title]="openManualSectionId === section.id ? 'Zum Sortieren erst Abschnitt zuklappen' : 'Zum Verschieben ziehen'" (click)="$event.stopPropagation()" (pointerdown)="startSectionDrag($event, sectionIndex, 'manual')" (keydown)="moveSectionWithKeyboard($event, sectionIndex, 'manual')"><app-fa-icon [icon]="faGripVertical" /></span>
                 <strong>{{ section.name || 'Abschnitt ' + (sectionIndex + 1) }}</strong>
@@ -166,7 +166,7 @@ import {
                     <input [name]="'section-name-' + sectionIndex" [(ngModel)]="section.name" required maxlength="100" placeholder="z. B. Bündchen" />
                   </label>
                   <div class="editor-item-actions">
-                    <button class="editor-action-button duplicate" type="button" (click)="duplicateSection.emit(sectionIndex)"><app-fa-icon [icon]="faCopy" /> Abschnitt duplizieren</button>
+                    <button class="editor-action-button duplicate" type="button" (click)="duplicateManualSectionAndScroll(sectionIndex)"><app-fa-icon [icon]="faCopy" /> Abschnitt duplizieren</button>
                     <button class="editor-action-button remove" type="button" (click)="removeSection.emit(sectionIndex)"><app-fa-icon [icon]="faTrashCan" /> Entfernen</button>
                   </div>
                 </div>
@@ -177,7 +177,7 @@ import {
                   </select>
                 </label>
               @for (entry of section.entries; track entry.id; let entryIndex = $index) {
-                <div class="instruction-editor">
+                <div class="instruction-editor" [attr.data-entry-id]="entry.id">
                   @if (entry.type === 'range') {
                     <strong>{{ entry.fromRow === entry.toRow ? 'Einzelreihe' : 'Anweisung · Reihenabschnitt' }}</strong>
                     <div class="row-number-grid">
@@ -232,7 +232,7 @@ import {
                     <button class="subtle-button inline-icon-action" type="button" (click)="addRepeatRow.emit(entry)"><app-fa-icon [icon]="faPlus" /> Musterreihe ergänzen</button>
                   }
                   <div class="editor-item-actions">
-                    <button class="editor-action-button duplicate" type="button" (click)="duplicateEntry.emit({ sectionIndex, entryIndex })"><app-fa-icon [icon]="faCopy" /> Anweisung duplizieren</button>
+                    <button class="editor-action-button duplicate" type="button" (click)="duplicateEntryAndScroll(sectionIndex, entryIndex)"><app-fa-icon [icon]="faCopy" /> Anweisung duplizieren</button>
                     <button class="editor-action-button remove" type="button" (click)="section.entries.splice(entryIndex, 1)"><app-fa-icon [icon]="faTrashCan" /> Entfernen</button>
                   </div>
                 </div>
@@ -269,7 +269,7 @@ import {
                 <p class="form-hint">Lege nur Namen und Reihenanzahl fest. Der Projektfortschritt wird dann anhand der erledigten Reihen berechnet.</p>
               </div>
               @for (section of draft.pdfSections; track section.id; let sectionIndex = $index) {
-                <div class="pdf-section-row" [attr.data-sortable-kind]="'pdf'" [attr.data-sortable-index]="sectionIndex" [class.section-insert-before]="isSectionInsert(sectionIndex, 'pdf', 'before')" [class.section-insert-after]="isSectionInsert(sectionIndex, 'pdf', 'after')">
+                <div class="pdf-section-row" [attr.data-section-id]="section.id" [attr.data-sortable-kind]="'pdf'" [attr.data-sortable-index]="sectionIndex" [class.section-insert-before]="isSectionInsert(sectionIndex, 'pdf', 'before')" [class.section-insert-after]="isSectionInsert(sectionIndex, 'pdf', 'after')">
                   <span class="section-drag-handle" role="button" tabindex="0" aria-label="PDF-Abschnitt verschieben. Mit Pfeiltasten sortieren." title="Zum Verschieben ziehen" (click)="$event.stopPropagation()" (pointerdown)="startSectionDrag($event, sectionIndex, 'pdf')" (keydown)="moveSectionWithKeyboard($event, sectionIndex, 'pdf')"><app-fa-icon [icon]="faGripVertical" /></span>
                   <label class="field">Abschnittsname
                     <input [name]="'pdf-section-name-' + sectionIndex" [(ngModel)]="section.name" required maxlength="100" placeholder="z. B. Rückenteil" />
@@ -278,7 +278,7 @@ import {
                     <input [name]="'pdf-section-rows-' + sectionIndex" type="number" min="1" max="10000" step="1" [(ngModel)]="section.rowCount" required />
                   </label>
                   <div class="editor-item-actions">
-                    <button class="subtle-button" type="button" (click)="duplicatePdfSection.emit(sectionIndex)">Abschnitt duplizieren</button>
+                    <button class="subtle-button" type="button" (click)="duplicatePdfSectionAndScroll(sectionIndex)">Abschnitt duplizieren</button>
                     <button class="remove-button" type="button" (click)="removePdfSection(sectionIndex)">Entfernen</button>
                   </div>
                 </div>
@@ -332,6 +332,8 @@ import {
   `,
 })
 export class ProjectEditorComponent {
+  private readonly hostElement: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly injector = inject(Injector);
   protected readonly faArrowLeft = faArrowLeft;
   protected readonly faCalculator = faCalculator;
   protected readonly faPlus = faPlus;
@@ -381,6 +383,39 @@ export class ProjectEditorComponent {
 
   protected checked(event: Event): boolean {
     return (event.target as HTMLInputElement).checked;
+  }
+
+  protected duplicateManualSectionAndScroll(index: number): void {
+    const previousCount = this.draft.sections.length;
+    this.duplicateSection.emit(index);
+    if (this.draft.sections.length === previousCount) return;
+    this.openManualSectionId = null;
+    this.scrollToCopy('section', this.draft.sections[this.draft.sections.length - 1].id);
+  }
+
+  protected duplicatePdfSectionAndScroll(index: number): void {
+    const previousCount = this.draft.pdfSections.length;
+    this.duplicatePdfSection.emit(index);
+    if (this.draft.pdfSections.length === previousCount) return;
+    this.scrollToCopy('section', this.draft.pdfSections[this.draft.pdfSections.length - 1].id);
+  }
+
+  protected duplicateEntryAndScroll(sectionIndex: number, entryIndex: number): void {
+    const section = this.draft.sections[sectionIndex];
+    if (!section) return;
+    const previousCount = section.entries.length;
+    this.duplicateEntry.emit({ sectionIndex, entryIndex });
+    if (section.entries.length === previousCount) return;
+    this.scrollToCopy('entry', section.entries[entryIndex + 1].id);
+  }
+
+  private scrollToCopy(kind: 'section' | 'entry', id: string): void {
+    afterNextRender(() => {
+      const attribute = kind === 'section' ? 'data-section-id' : 'data-entry-id';
+      const target = Array.from(this.hostElement.nativeElement.querySelectorAll<HTMLElement>(`[${attribute}]`))
+        .find((element) => element.getAttribute(attribute) === id);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, { injector: this.injector });
   }
 
   protected onManualSectionToggle(event: Event, sectionId: string): void {

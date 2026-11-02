@@ -358,4 +358,7 @@
     (duplicateEntry)="duplicateEntry($event.sectionIndex, $event.entryIndex)"
     (duplicateProject)="duplicateProject($event)"
   />
+  @if (duplicationMessage(); as message) {
+    <div class="duplication-toast" role="status" aria-live="polite">{{ message }}</div>
+  }
 }

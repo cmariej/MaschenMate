@@ -341,10 +341,10 @@
                 class="crop-image"
                 [src]="cropSource"
                 alt="Bild zum Zuschneiden"
-                [style.width.px]="cropImageWidth"
-                [style.height.px]="cropImageHeight"
-                [style.left.px]="cropImageLeft"
-                [style.top.px]="cropImageTop"
+                [style.width.%]="cropImageWidth / cropStageSize * 100"
+                [style.height.%]="cropImageHeight / cropStageSize * 100"
+                [style.left.%]="cropImageLeft / cropStageSize * 100"
+                [style.top.%]="cropImageTop / cropStageSize * 100"
               />
             }
           </div>

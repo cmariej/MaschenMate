@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { faFolderOpen, faHouse, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { NavigationEnd, Router } from '@angular/router';
@@ -68,6 +68,8 @@ export class ProjectDashboard implements OnInit {
   protected currentRowInput: number | null = null;
   protected currentRowInputError = '';
   protected editorError = '';
+  protected readonly duplicationMessage = signal('');
+  private duplicationMessageTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingInstructionPdf: File | null = null;
   protected busyProjectId = '';
   protected editingId: string | null = null;
@@ -108,6 +110,9 @@ export class ProjectDashboard implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.destroyRef.onDestroy(() => {
+      if (this.duplicationMessageTimer !== null) clearTimeout(this.duplicationMessageTimer);
+    });
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       takeUntilDestroyed(this.destroyRef),
@@ -710,6 +715,7 @@ export class ProjectDashboard implements OnInit {
     copy.entries = copy.entries.map((entry) => ({ ...entry, id: this.createId() }));
     this.draft.sections.push(copy);
     this.editorError = '';
+    this.showDuplicationMessage('Abschnitt erfolgreich dupliziert.');
   }
 
   protected duplicatePdfSection(index: number): void {
@@ -725,6 +731,7 @@ export class ProjectDashboard implements OnInit {
       name: `${section.name} (Kopie)`.slice(0, 100),
     });
     this.editorError = '';
+    this.showDuplicationMessage('Abschnitt erfolgreich dupliziert.');
   }
 
   protected duplicateEntry(sectionIndex: number, entryIndex: number): void {
@@ -750,6 +757,16 @@ export class ProjectDashboard implements OnInit {
     }
     section.entries.splice(entryIndex + 1, 0, copy);
     this.editorError = '';
+    this.showDuplicationMessage('Anweisung erfolgreich dupliziert.');
+  }
+
+  private showDuplicationMessage(message: string): void {
+    if (this.duplicationMessageTimer !== null) clearTimeout(this.duplicationMessageTimer);
+    this.duplicationMessage.set(message);
+    this.duplicationMessageTimer = setTimeout(() => {
+      this.duplicationMessage.set('');
+      this.duplicationMessageTimer = null;
+    }, 2000);
   }
 
   protected duplicateProject(projectId: string): void {

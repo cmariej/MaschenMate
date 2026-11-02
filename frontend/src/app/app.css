@@ -389,8 +389,8 @@ form input::placeholder {
   box-shadow: 0 20px 70px rgb(30 22 17 / 25%);
 }
 
-.crop-backdrop {
-  z-index: 11;
+.account-panel > .crop-backdrop {
+  z-index: 110;
 }
 
 .crop-dialog {

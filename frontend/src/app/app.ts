@@ -240,23 +240,27 @@ export class App implements OnInit {
           this.cropDialogOpen = true;
           this.readingAvatar = false;
           input.value = '';
+          this.changeDetector.markForCheck();
         };
         image.onerror = () => {
           this.avatarError = 'Das Bild konnte nicht geöffnet werden.';
           this.readingAvatar = false;
           input.value = '';
+          this.changeDetector.markForCheck();
         };
         image.src = imageData;
       } else {
         this.avatarError = 'Das Bild konnte nicht gelesen werden.';
         this.readingAvatar = false;
         input.value = '';
+        this.changeDetector.markForCheck();
       }
     };
     reader.onerror = () => {
       this.avatarError = 'Das Bild konnte nicht gelesen werden.';
       this.readingAvatar = false;
       input.value = '';
+      this.changeDetector.markForCheck();
     };
     reader.readAsDataURL(file);
   }

@@ -1372,6 +1372,32 @@ details[open] > .disclosure-summary::after {
   margin-top: 16px;
 }
 
+.duplication-toast {
+  position: fixed;
+  z-index: 1000;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 13px 18px;
+  border: 1px solid #9ccba7;
+  border-radius: 12px;
+  background: #e7f5e9;
+  box-shadow: 0 8px 24px rgb(33 74 43 / 18%);
+  color: #285d35;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.section-editor,
+.pdf-section-row,
+.instruction-editor {
+  scroll-margin-top: 16px;
+}
+
 /* Shared phone typography for the project, instruction and material screens. */
 @media (max-width: 650px) {
   .account-panel.project-app .material-grid {
