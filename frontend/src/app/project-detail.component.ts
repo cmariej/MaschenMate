@@ -30,8 +30,8 @@ interface YarnUsage {
   template: `
     <section class="detail-page" aria-labelledby="detail-title">
       <header class="detail-page-heading">
-        <button class="route-back-button icon-action-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
-        <div><span class="eyebrow">{{ project.type === 'knitting' ? 'Strickprojekt' : 'Häkelprojekt' }} · {{ category }}</span><h2 id="detail-title">{{ project.name }}</h2></div>
+        <button class="route-back-button icon-action-button back-navigation-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
+        <div class="detail-title-group"><span class="eyebrow">{{ project.type === 'knitting' ? 'Strickprojekt' : 'Häkelprojekt' }} · {{ category }}</span><h2 id="detail-title">{{ project.name }}</h2></div>
         <div class="detail-heading-actions">
           <button class="secondary-button icon-action-button" type="button" (click)="edit.emit()" aria-label="Projekt bearbeiten" title="Projekt bearbeiten"><app-fa-icon [icon]="faPen" /></button>
         </div>
@@ -69,7 +69,7 @@ interface YarnUsage {
                 <h4 id="sections-title">Abschnitte</h4>
                 <div class="progress-section-list" aria-label="Fortschritt der Abschnitte">
                   @for (section of progressSections; track section.id) {
-                    <div class="progress-section-entry">
+                    <div class="progress-section-entry" [class.active]="project.progress.activeSectionId === section.id">
                       <button class="progress-section-item" type="button" [class.active]="project.progress.activeSectionId === section.id" [disabled]="busy" (click)="chooseProgressSection(section.id)">
                         <span class="progress-section-heading"><strong>{{ section.name }}</strong><span>{{ sectionCompletedRowsFor(section) }} / {{ sectionRowCountFor(section) }} Reihen</span><b>{{ sectionProgress[section.id] ?? 0 }}%</b></span>
                         <span class="progress-track" aria-hidden="true"><span [style.width.%]="sectionProgress[section.id] ?? 0"></span></span>
@@ -128,8 +128,13 @@ interface YarnUsage {
         @if (project.instructionMode !== 'pdf') {
         <section class="instructions-accordion">
           <header class="instructions-heading instructions-fixed-heading">
-            <span>Anleitung</span>
-            <small>{{ project.sections.length }} {{ project.sections.length === 1 ? 'Abschnitt' : 'Abschnitte' }}</small>
+            <div class="instructions-title-group">
+              <span>Anleitung</span>
+              <small>{{ project.sections.length }} {{ project.sections.length === 1 ? 'Abschnitt' : 'Abschnitte' }}</small>
+            </div>
+            <div class="instructions-heading-actions">
+              <button class="secondary-button" type="button" (click)="editInstructions.emit()">{{ project.sections.length ? 'Anleitung bearbeiten' : 'Anleitung hinzufügen' }}</button>
+            </div>
           </header>
           <div class="instructions-content">
           @for (section of project.sections; track section.id) {
@@ -186,13 +191,20 @@ interface YarnUsage {
           }
           </div>
         </section>
-        } @else if (instructionPdfUrl && instructionPdfHref) {
+        } @else {
           <section class="detail-block pdf-instruction-viewer" aria-labelledby="pdf-instruction-title">
             <div class="pdf-instruction-heading">
               <h4 id="pdf-instruction-title">PDF-Anleitung</h4>
-              <a class="small-button" [href]="instructionPdfHref" target="_blank" rel="noopener">In neuem Tab öffnen</a>
+              <div class="pdf-instruction-actions">
+                <button class="secondary-button" type="button" (click)="editInstructions.emit()">{{ instructionPdfHref ? 'Anleitung bearbeiten' : 'Anleitung hinzufügen' }}</button>
+                @if (instructionPdfHref) { <a class="small-button" [href]="instructionPdfHref" target="_blank" rel="noopener">In neuem Tab öffnen</a> }
+              </div>
             </div>
-            <iframe [src]="instructionPdfUrl" [title]="'PDF-Anleitung für ' + project.name"></iframe>
+            @if (instructionPdfUrl) {
+              <iframe [src]="instructionPdfUrl" [title]="'PDF-Anleitung für ' + project.name"></iframe>
+            } @else {
+              <p class="form-hint">Für dieses Projekt ist noch keine PDF-Anleitung hinterlegt.</p>
+            }
           </section>
         }
         @if (project.progress.changelog.length) {
@@ -241,6 +253,7 @@ export class ProjectDetailComponent implements OnChanges {
   @Input() yarnInventory: Yarn[] = [];
   @Input() formatDate: (date: string) => string = (date) => date;
   @Output() edit = new EventEmitter<void>();
+  @Output() editInstructions = new EventEmitter<void>();
   @Output() back = new EventEmitter<void>();
   @Output() start = new EventEmitter<void>();
   @Output() makeCurrent = new EventEmitter<void>();

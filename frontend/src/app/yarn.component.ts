@@ -22,7 +22,7 @@ export type MaterialViewMode = 'preview' | 'edit';
       </button>
     } @else {
       <section class="project-editor route-editor" aria-labelledby="material-editor-title">
-        <header class="editor-heading"><button class="route-back-button icon-action-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button><div><span class="eyebrow">Materialverwaltung</span><h2 id="material-editor-title">{{ isNew ? 'Garn hinzufügen' : 'Garn bearbeiten' }}</h2></div></header>
+        <header class="editor-heading"><button class="route-back-button icon-action-button back-navigation-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button><div><span class="eyebrow">Materialverwaltung</span><h2 id="material-editor-title">{{ isNew ? 'Garn hinzufügen' : 'Garn bearbeiten' }}</h2></div></header>
         <form class="editor-form" (ngSubmit)="save.emit()" #yarnForm="ngForm">
           <div class="form-grid">
             <label class="field">Name<input name="yarnName" [(ngModel)]="yarn.name" required maxlength="100" /></label>

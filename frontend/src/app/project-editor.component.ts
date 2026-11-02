@@ -21,14 +21,15 @@ import {
   template: `
     <section class="project-editor route-editor" aria-labelledby="editor-title">
       <header class="editor-heading">
-        <button class="route-back-button icon-action-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
+        <button class="route-back-button icon-action-button back-navigation-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
         <div>
-          <span class="eyebrow">{{ editing ? 'Projekt aktualisieren' : 'Deine Idee wird konkret' }}</span>
-          <h2 id="editor-title">{{ editing ? 'Projekt bearbeiten' : 'Neues Projekt' }}</h2>
+          <span class="eyebrow">{{ instructionOnly ? 'Anleitung aktualisieren' : editing ? 'Projekt aktualisieren' : 'Deine Idee wird konkret' }}</span>
+          <h2 id="editor-title">{{ instructionOnly ? 'Anleitung bearbeiten' : editing ? 'Projekt bearbeiten' : 'Neues Projekt' }}</h2>
         </div>
       </header>
 
       <form class="editor-form" (ngSubmit)="save.emit()" #projectForm="ngForm">
+        @if (!instructionOnly) {
         <section class="form-section">
           <h3>Projekt</h3>
           @if (!editing && projects.length) {
@@ -123,7 +124,6 @@ import {
             </div>
           }
         </section>
-
         <section class="form-section">
           <div class="inline-heading">
             <h3>Verwendete Nadeln</h3>
@@ -136,7 +136,9 @@ import {
             </label>
           } @empty { <p class="form-hint">Lege zuerst in der Materialverwaltung mindestens eine Nadel an.</p> }
         </section>
+        }
 
+        @if (instructionOnly) {
         <section class="form-section">
           <h3>Anleitung</h3>
           <div class="instruction-mode-choice" role="radiogroup" aria-label="Anleitungsformat">
@@ -287,6 +289,9 @@ import {
             </div>
           }
         </section>
+        } @else if (!editing) {
+          <p class="form-hint editor-workflow-hint">Die Anleitung kannst du nach dem Anlegen des Projekts in den Projektdetails hinzufügen.</p>
+        }
 
         @if (editorError) {
           <p class="notice error-notice" role="alert">{{ editorError }}</p>
@@ -294,7 +299,7 @@ import {
         <footer class="editor-actions">
           <button class="secondary-button" type="button" [disabled]="saving" (click)="back.emit()">Abbrechen</button>
           <button class="primary-button" type="submit" [disabled]="saving || projectForm.invalid">
-            {{ saving ? 'Wird gespeichert …' : editing ? 'Änderungen speichern' : 'Projekt anlegen' }}
+            {{ saving ? 'Wird gespeichert …' : instructionOnly ? 'Anleitung speichern' : editing ? 'Änderungen speichern' : 'Projekt anlegen' }}
           </button>
         </footer>
       </form>
@@ -353,6 +358,7 @@ export class ProjectEditorComponent {
   @Input({ required: true }) categories: { value: ProjectCategory; label: string }[] = [];
   @Input({ required: true }) needleKinds: { value: NeedleKind; label: string }[] = [];
   @Input() editing = false;
+  @Input() instructionOnly = false;
   @Input() projects: Project[] = [];
   @Input() saving = false;
   @Input() editorError = '';

@@ -568,6 +568,14 @@ form input::placeholder {
   z-index: 1;
 }
 
+.account-panel > .authenticated-header {
+  z-index: 5;
+}
+
+.account-panel > .authenticated-header.menu-open {
+  z-index: 100;
+}
+
 .account-panel > .brand {
   display: flex;
   justify-content: center;
@@ -852,6 +860,13 @@ form input::placeholder {
 .button-secondary:hover:not(:disabled) {
   border-color: #ceb6c6;
   background: #fbf5f8;
+}
+
+@media (max-width: 1400px) {
+  .account-panel.project-app,
+  .account-panel.legal-app {
+    width: 100%;
+  }
 }
 
 @media (max-width: 650px) {

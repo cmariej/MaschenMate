@@ -3,6 +3,8 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import type { Observable } from 'rxjs';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIconComponent } from './fontawesome-icon.component';
 
 interface FriendUser {
   id: string;
@@ -28,12 +30,13 @@ declare global {
 }
 
 @Component({
-  imports: [FormsModule],
+  imports: [FormsModule, FontAwesomeIconComponent],
   selector: 'app-friends',
   styleUrl: './friends.component.css',
   templateUrl: './friends.component.html',
 })
 export class FriendsComponent implements OnInit {
+  protected readonly faArrowLeft = faArrowLeft;
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly changeDetector = inject(ChangeDetectorRef);

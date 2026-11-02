@@ -1,7 +1,7 @@
 <main class="shell">
   <section class="account-panel" [class.project-app]="auth.user() && !profileOpen" [class.legal-app]="isLegalPage">
     @if (auth.user(); as currentUser) {
-      <header class="authenticated-header">
+      <header class="authenticated-header" [class.menu-open]="menuOpen">
         <a class="brand" href="/" aria-label="MaschenMate Startseite">
           <img class="brand-logo" src="/logo.png" alt="" />
         </a>
@@ -43,7 +43,7 @@
       @if (auth.user(); as user) {
         @if (profileOpen) {
           <div class="profile-heading">
-            <button class="back-button icon-action-button" type="button" (click)="closeProfileSettings()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
+            <button class="back-button icon-action-button back-navigation-button" type="button" (click)="closeProfileSettings()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button>
             <div>
               <span class="eyebrow">Dein Konto</span>
               <h2>Profileinstellungen</h2>

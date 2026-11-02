@@ -70,6 +70,7 @@ export class ProjectDashboard implements OnInit {
   private pendingInstructionPdf: File | null = null;
   protected busyProjectId = '';
   protected editingId: string | null = null;
+  protected instructionOnlyEditor = false;
   protected draft: ProjectInput = this.newProject();
   protected page: 'home' | 'projects' | 'yarns' | 'needles' = 'home';
   protected view: 'list' | 'project-detail' | 'project-edit' | 'yarn-edit' | 'needle-edit' = 'list';
@@ -246,10 +247,12 @@ export class ProjectDashboard implements OnInit {
     this.selectedProject = null;
     this.yarnDraft = null;
     this.needleDraft = null;
+    this.instructionOnlyEditor = false;
 
     const preservePath = this.preserveProjectDraftOnPath.replace(/^\/+|\/+$/g, '');
     if (preservePath && path === preservePath) {
       this.preserveProjectDraftOnPath = '';
+      this.instructionOnlyEditor = preservePath.split('/')[3] === 'instructions';
       this.view = 'project-edit';
       this.lastRoutePath = path;
       return;
@@ -268,6 +271,7 @@ export class ProjectDashboard implements OnInit {
         if (this.loading) return;
         this.error = 'Dieses Projekt wurde nicht gefunden.';
       } else if (segments[2] === 'edit') {
+        this.instructionOnlyEditor = segments[3] === 'instructions';
         if (this.editingId !== project.id) this.setProjectDraft(project);
         this.view = 'project-edit';
       } else {
@@ -385,6 +389,7 @@ export class ProjectDashboard implements OnInit {
 
   protected openNewProject(): void {
     this.editingId = null;
+    this.instructionOnlyEditor = false;
     this.pendingInstructionPdf = null;
     this.draft = this.newProject();
     this.editorError = '';
@@ -392,8 +397,15 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected editProject(project: Project): void {
+    this.instructionOnlyEditor = false;
     this.setProjectDraft(project);
     void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}/edit`);
+  }
+
+  protected editProjectInstructions(project: Project): void {
+    this.instructionOnlyEditor = true;
+    this.setProjectDraft(project);
+    void this.router.navigateByUrl(`/projects/${encodeURIComponent(project.id)}/edit/instructions`);
   }
 
   private setProjectDraft(project: Project): void {
@@ -921,7 +933,6 @@ export class ProjectDashboard implements OnInit {
     this.draft.progress.completedRows ??= {};
     this.draft.progress.changelog ??= [];
     this.draft.pdfSections ??= [];
-    if (this.draft.instructionMode === 'pdf' && this.draft.pdfSections.length) this.draft.progress.pdfProgress = 0;
     const progressSections = this.draft.instructionMode === 'pdf' ? this.draft.pdfSections : this.draft.sections;
     if (!progressSections.some((section) => section.id === this.draft.progress.activeSectionId)) {
       this.draft.progress.activeSectionId = progressSections[0]?.id ?? null;
@@ -1007,7 +1018,7 @@ export class ProjectDashboard implements OnInit {
     if (project.patternYarn && !this.isPositiveFinite(project.patternYarn.amount, 1_000_000)) return 'Bitte gib eine gültige Garnmenge für die Maschenprobe ein.';
     if (project.gauge && (!this.isPositiveFinite(project.gauge.pattern.stitches, 1000) || !this.isPositiveFinite(project.gauge.pattern.rows, 1000) || !this.isPositiveFinite(project.gauge.personal.stitches, 1000) || !this.isPositiveFinite(project.gauge.personal.rows, 1000))) return 'Bitte prüfe die Maschenprobe.';
 
-    if (project.instructionMode === 'pdf') {
+    if (this.instructionOnlyEditor && project.instructionMode === 'pdf') {
       if ((!project.instructionPdf && !this.editingId && !this.pendingInstructionPdf) || (project.instructionPdf && !project.instructionPdf.startsWith('data:application/pdf;base64,JVBERi0'))) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
       if (!project.instructionPdfName?.trim() || project.instructionPdfName.length > 255) return 'Der Dateiname der PDF-Anleitung ist ungültig.';
       const pdfSectionIds = new Set<string>();
@@ -1017,7 +1028,7 @@ export class ProjectDashboard implements OnInit {
         if (!section.name.trim() || section.name.trim().length > 100) return 'Bitte gib jedem PDF-Abschnitt einen Namen mit höchstens 100 Zeichen.';
         if (!Number.isInteger(section.rowCount) || section.rowCount < 1 || section.rowCount > 10_000) return `Bitte gib für „${section.name}“ eine Reihenanzahl zwischen 1 und 10.000 ein.`;
       }
-    } else {
+    } else if (this.instructionOnlyEditor) {
       if (project.sections.length === 0) return 'Bitte füge mindestens einen Abschnitt mit einer Anleitung hinzu.';
       const sectionIds = new Set<string>();
       const needleIds = new Set(project.needles.map((needle) => needle.id));
@@ -1047,7 +1058,7 @@ export class ProjectDashboard implements OnInit {
       }
     }
 
-    if (project.progress.activeSectionId && !this.trackingSections(project).some((section) => section.id === project.progress.activeSectionId)) return 'Der aktive Anleitungsabschnitt ist nicht mehr vorhanden.';
+    if (this.instructionOnlyEditor && project.progress.activeSectionId && !this.trackingSections(project).some((section) => section.id === project.progress.activeSectionId)) return 'Der aktive Anleitungsabschnitt ist nicht mehr vorhanden.';
     if (Object.values(project.progress.completedRows).some((rows) => !Number.isInteger(rows) || rows < 0 || rows > 100_000)) return 'Der gespeicherte Reihenfortschritt ist ungültig.';
     const pdfProgress = project.progress.pdfProgress ?? 0;
     if (!Number.isInteger(pdfProgress) || pdfProgress < 0 || pdfProgress > 100 || pdfProgress % 10 !== 0) return 'Der PDF-Fortschritt muss zwischen 0 und 100 % in 10-%-Schritten liegen.';

@@ -644,6 +644,45 @@ button.icon-action-button:focus-visible {
   outline-offset: 2px;
 }
 
+.shell button.back-navigation-button,
+.shell a.back-navigation-button {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #e8d8e2;
+  border-radius: 12px;
+  background: #f7eff4;
+  box-shadow: none;
+  color: #805d7c;
+  font-size: 17px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.shell .back-navigation-button app-fa-icon {
+  display: inline-flex;
+  font-size: inherit;
+}
+
+.shell .back-navigation-button:hover:not(:disabled) {
+  border-color: #cfb6c7;
+  background: #eee0e9;
+  text-decoration: none;
+  transform: none;
+}
+
+.shell .back-navigation-button:focus-visible {
+  outline: 3px solid rgb(185 142 170 / 45%);
+  outline-offset: 2px;
+}
+
 .detail-project-image {
   width: 100%;
   max-height: 280px;
@@ -661,7 +700,15 @@ button.icon-action-button:focus-visible {
   }
 
   .authenticated-header {
-    margin-bottom: 14px;
+    margin-bottom: 0;
+  }
+
+  .account-panel.project-app .detail-page {
+    padding-top: 0;
+  }
+
+  .account-panel.project-app .detail-page-heading {
+    padding-top: 4px;
   }
 
   .authenticated-header > .brand {
@@ -911,6 +958,18 @@ button.icon-action-button:focus-visible {
 .section-choice:disabled {
   cursor: wait;
   opacity: .65;
+}
+
+.current-progress-metrics strong,
+.pdf-progress-stepper strong,
+.pdf-progress-stepper button,
+.progress-label strong,
+.progress-badge,
+.progress-section-heading b,
+.section-progress,
+.section-choice-summary > small,
+.section-choice > strong {
+  white-space: nowrap;
 }
 
 .editor-action-button {
@@ -1277,5 +1336,148 @@ button.icon-action-button:focus-visible {
 
   .swatch-calculator-dialog > footer button {
     width: 100%;
+  }
+}
+
+/* Shared phone typography for the project, instruction and material screens. */
+@media (max-width: 650px) {
+  .account-panel.project-app {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .account-panel.project-app :is(.eyebrow, .progress-eyebrow) {
+    font-size: 11px;
+    line-height: 1.4;
+    letter-spacing: .8px;
+  }
+
+  .account-panel.project-app :is(.form-hint, .notice, .empty-state p, .library-option, .material-card, .material-summary, .field, .image-field, .row-number-grid label, .gauge-card label, .project-yarn-need-settings label, .swatch-weight-entry label) {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .account-panel.project-app :is(.field small, .project-duplicate-field small, .project-yarn-need-settings small, .instruction-mode-option small, .instruction-pdf-upload small, .material-label, .meta, .badge, .not-started) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .account-panel.project-app :is(.form-section h3, .material-title, .section-heading h2) {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+
+  .account-panel.project-app :is(.gauge-card > strong, .instruction-mode-option strong, .section-editor-summary, .pdf-section-row label, .swatch-known-label) {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .account-panel.project-app :is(.primary-button, .secondary-button, .subtle-button, .small-button, .file-picker, .editor-action-button, .remove-button, .text-button, .composition-option, .remove-material, .swatch-known-options button) {
+    min-height: 44px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .account-panel.project-app :is(.editor-form, .swatch-calculator-dialog) :is(input:not([type='checkbox']):not([type='radio']):not([type='file']), select, textarea) {
+    min-height: 44px;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  .account-panel.project-app .detail-page :is(.usage-explanation, .usage-missing, .instruction-item, .instruction-range, .section-needle strong, .yarn-chip, .yarn-usage-item h5, .yarn-usage-unknown strong, .progress-empty-state p, .section-done-note, .progress-subsection h4, .pdf-progress-controls > p:first-child) {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .account-panel.project-app .detail-page :is(.yarn-usage-metrics > span, .yarn-usage-metrics small, .yarn-usage-unknown small, .instruction-item small, .yarn-chip small, .yarn-chip > span, .progress-section-heading > span, .instructions-heading-actions small) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .account-panel.project-app .detail-page :is(.progress-section-heading strong, .progress-section-heading b, .section-progress) {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .account-panel.project-app .detail-page .yarn-usage-metrics strong {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+
+  .account-panel.project-app .detail-page :is(.instructions-heading, .yarn-usage-block > h4, .pattern-section-heading h3) {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+
+  .account-panel.project-app .detail-page .progress-heading h3 {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .account-panel.project-app .detail-page :is(.progress-section-actions button, .make-current-project-button, .cancel-project-link, .dismiss-cancel-button, .delete-link) {
+    min-height: 44px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .account-panel.project-app .detail-page .instructions-heading-actions {
+    flex-wrap: wrap;
+  }
+
+  .account-panel.project-app .detail-page .instructions-heading-actions .secondary-button {
+    font-size: 13px;
+  }
+
+  .account-panel.project-app .detail-page .instructions-fixed-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .account-panel.project-app .detail-page .instructions-title-group {
+    justify-content: space-between;
+  }
+
+  .account-panel.project-app .detail-page .instructions-title-group small {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .account-panel.project-app .detail-page .instructions-fixed-heading .instructions-heading-actions {
+    margin-left: 0;
+  }
+
+  .account-panel.project-app .detail-page .instructions-fixed-heading .secondary-button {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  .account-panel.project-app .project-card :is(.meta, .badge, .progress-label, .not-started) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .account-panel.project-app .section-choice-summary {
+    min-height: 44px;
+  }
+
+  .account-panel.project-app :is(.section-choice-summary > span, .section-choice-summary > small, .section-choice-list button, .current-project-meta, .current-project-category) {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .account-panel.project-app .section-choice-summary > strong {
+    font-size: 13px;
+  }
+
+  .account-panel.project-app .section-choice-list button {
+    min-height: 44px;
+  }
+
+  .bottom-tabs button {
+    font-size: 11px;
+    line-height: 1.3;
   }
 }

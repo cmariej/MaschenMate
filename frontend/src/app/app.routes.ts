@@ -7,6 +7,7 @@ export const routes: Routes = [
   { path: 'dashboard', loadComponent: loadDashboard, title: 'Dashboard · MaschenMate' },
   { path: 'projects', loadComponent: loadDashboard, title: 'Projekte · MaschenMate' },
   { path: 'projects/new', loadComponent: loadDashboard, title: 'Neues Projekt · MaschenMate' },
+  { path: 'projects/:projectId/edit/instructions', loadComponent: loadDashboard, title: 'Anleitung bearbeiten · MaschenMate' },
   { path: 'projects/:projectId/edit', loadComponent: loadDashboard, title: 'Projekt bearbeiten · MaschenMate' },
   { path: 'projects/:projectId', loadComponent: loadDashboard, title: 'Projektdetails · MaschenMate' },
   { path: 'yarns', loadComponent: loadDashboard, title: 'Garne · MaschenMate' },

@@ -1,13 +1,17 @@
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminService, PendingRegistration } from './admin.service';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIconComponent } from './fontawesome-icon.component';
 
 @Component({
+  imports: [FontAwesomeIconComponent],
   selector: 'app-admin-registrations',
   styleUrl: './admin-registrations.component.css',
   templateUrl: './admin-registrations.component.html',
 })
 export class AdminRegistrationsComponent implements OnInit {
+  protected readonly faArrowLeft = faArrowLeft;
   private readonly adminService = inject(AdminService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly router = inject(Router);

@@ -17,7 +17,7 @@ import { MaterialViewMode } from './yarn.component';
       </button>
     } @else {
       <section class="project-editor route-editor" aria-labelledby="material-editor-title">
-        <header class="editor-heading"><button class="route-back-button icon-action-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button><div><span class="eyebrow">Materialverwaltung</span><h2 id="material-editor-title">{{ isNew ? 'Nadel hinzufügen' : 'Nadel bearbeiten' }}</h2></div></header>
+        <header class="editor-heading"><button class="route-back-button icon-action-button back-navigation-button" type="button" (click)="back.emit()" aria-label="Zurück" title="Zurück"><app-fa-icon [icon]="faArrowLeft" /></button><div><span class="eyebrow">Materialverwaltung</span><h2 id="material-editor-title">{{ isNew ? 'Nadel hinzufügen' : 'Nadel bearbeiten' }}</h2></div></header>
         <form class="editor-form" (ngSubmit)="save.emit()" #needleForm="ngForm">
           <label class="field">Typ<select name="needleType" [(ngModel)]="needle.type">@for (kind of kinds; track kind.value) { <option [value]="kind.value">{{ kind.label }}</option> }</select></label>
           <label class="field">Größe (mm)<input name="needleSize" type="number" min="0.1" step="0.1" [(ngModel)]="needle.size" required /></label>
