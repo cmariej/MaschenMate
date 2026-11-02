@@ -849,7 +849,7 @@ button.icon-action-button:focus-visible {
   display: none;
 }
 
-.section-choice-summary::after {
+.disclosure-summary::after {
   width: 7px;
   height: 7px;
   flex: 0 0 7px;
@@ -868,7 +868,7 @@ button.icon-action-button:focus-visible {
   background: #fcf8fa;
 }
 
-.section-choice-menu[open] > .section-choice-summary::after {
+details[open] > .disclosure-summary::after {
   transform: translateY(2px) rotate(225deg);
 }
 
@@ -1339,8 +1339,54 @@ button.icon-action-button:focus-visible {
   }
 }
 
+.project-dashboard .dashboard-heading.projects-page-heading,
+.project-dashboard .dashboard-heading.materials-page-heading {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.project-dashboard .projects-page-heading > div:first-child,
+.project-dashboard .materials-page-heading > div:first-child {
+  min-width: 0;
+}
+
+.project-dashboard .materials-page-heading > button {
+  flex: 0 0 44px;
+  margin-top: 4px;
+}
+
+.project-dashboard .projects-page-heading .header-actions {
+  flex: 0 0 auto;
+  padding-top: 4px;
+}
+
+.project-dashboard .current-project-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
 /* Shared phone typography for the project, instruction and material screens. */
 @media (max-width: 650px) {
+  .account-panel.project-app .material-grid {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+
+  .account-panel.project-app .material-grid > :is(app-yarn, app-needle) {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+  }
+
+  .account-panel.project-app .material-grid .material-card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+  }
+
   .account-panel.project-app {
     font-size: 14px;
     line-height: 1.5;
@@ -1410,7 +1456,7 @@ button.icon-action-button:focus-visible {
   }
 
   .account-panel.project-app .detail-page .progress-heading h3 {
-    font-size: 22px;
+    font-size: 20px;
     line-height: 1.2;
   }
 

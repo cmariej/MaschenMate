@@ -155,7 +155,7 @@ import {
           <p class="form-hint">Jeder Eintrag steht für eine Reihe oder einen zusammenhängenden Reihenabschnitt mit gleicher Maschenzahl und Anweisung. Teile den Abschnitt auf, wenn sich Maschenzahl, Text oder Garn ändert. Eine Wiederholung bildet einen wechselnden Reihenzyklus wie rechts/links ab.</p>
           @for (section of draft.sections; track section.id; let sectionIndex = $index) {
             <details class="section-editor" [open]="openManualSectionId === section.id" (toggle)="onManualSectionToggle($event, section.id)" [attr.data-sortable-kind]="'manual'" [attr.data-sortable-index]="sectionIndex" [class.section-insert-before]="isSectionInsert(sectionIndex, 'manual', 'before')" [class.section-insert-after]="isSectionInsert(sectionIndex, 'manual', 'after')">
-              <summary class="section-editor-summary">
+              <summary class="disclosure-summary section-editor-summary">
                 <span class="section-drag-handle" [class.drag-disabled]="openManualSectionId === section.id" role="button" tabindex="0" [attr.aria-disabled]="openManualSectionId === section.id" aria-label="Abschnitt verschieben. Mit Pfeiltasten sortieren." [title]="openManualSectionId === section.id ? 'Zum Sortieren erst Abschnitt zuklappen' : 'Zum Verschieben ziehen'" (click)="$event.stopPropagation()" (pointerdown)="startSectionDrag($event, sectionIndex, 'manual')" (keydown)="moveSectionWithKeyboard($event, sectionIndex, 'manual')"><app-fa-icon [icon]="faGripVertical" /></span>
                 <strong>{{ section.name || 'Abschnitt ' + (sectionIndex + 1) }}</strong>
                 <span>{{ section.entries.length }} {{ section.entries.length === 1 ? 'Anweisung' : 'Anweisungen' }}</span>

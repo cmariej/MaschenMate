@@ -2,9 +2,9 @@
   <header class="section-heading">
     <div>
       <span class="eyebrow">Aktuelles aus deinem Netzwerk</span>
-      <h2 id="feed-title">Feed</h2>
+      <h2 id="feed-title">Mein Feed</h2>
     </div>
-    <button class="subtle-button" type="button" (click)="refresh.emit()" [disabled]="loading">Aktualisieren</button>
+    <button class="subtle-button feed-refresh-button" type="button" (click)="refresh.emit()" [disabled]="loading" aria-label="Feed aktualisieren" title="Feed aktualisieren"><app-fa-icon [icon]="faArrowsRotate" /></button>
   </header>
   @if (error) {
     <p class="notice error-notice" role="alert">{{ error }}</p>
@@ -22,9 +22,9 @@
             <div class="feed-actor-content">
               <strong>{{ activity.actor.id === currentUserId ? 'Du' : activity.actor.name }}</strong>
               @if (activity.actor.id !== currentUserId) {
-                <span>@{{ activity.actor.username }}</span>
+                <span class="feed-actor-username">@{{ activity.actor.username }}</span>
               }
-              <span>{{ message(activity) }}</span>
+              <span class="feed-actor-message">{{ message(activity) }}</span>
             </div>
             <time [attr.datetime]="activity.createdAt">{{ activityTime(activity.createdAt) }}</time>
           </div>

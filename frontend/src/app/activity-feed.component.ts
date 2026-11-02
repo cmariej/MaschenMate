@@ -1,12 +1,16 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FeedActivity } from './project.service';
+import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIconComponent } from './fontawesome-icon.component';
 
 @Component({
+  imports: [FontAwesomeIconComponent],
   selector: 'app-activity-feed',
   styleUrl: './activity-feed.component.css',
   templateUrl: './activity-feed.component.html',
 })
 export class ActivityFeedComponent {
+  protected readonly faArrowsRotate = faArrowsRotate;
   @Input() activities: FeedActivity[] = [];
   @Input() loading = false;
   @Input() error = '';
@@ -14,15 +18,16 @@ export class ActivityFeedComponent {
   @Output() refresh = new EventEmitter<void>();
 
   protected message(activity: FeedActivity): string {
+    const verb = activity.actor.id === this.currentUserId ? 'hast' : 'hat';
     switch (activity.type) {
       case 'started':
-        return 'hat ein neues Projekt gestartet';
+        return `${verb} ein neues Projekt gestartet`;
       case 'section_completed':
-        return `hat den Abschnitt „${activity.sectionName ?? 'Unbenannter Abschnitt'}“ abgeschlossen`;
+        return `${verb} den Abschnitt „${activity.sectionName ?? 'Unbenannter Abschnitt'}“ abgeschlossen`;
       case 'finished':
-        return 'hat ein Projekt fertiggestellt';
+        return `${verb} ein Projekt fertiggestellt`;
       case 'cancelled':
-        return 'hat ein Projekt abgebrochen';
+        return `${verb} ein Projekt abgebrochen`;
     }
   }
 

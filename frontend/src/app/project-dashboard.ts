@@ -117,12 +117,6 @@ export class ProjectDashboard implements OnInit {
     this.loadMaterials();
   }
 
-  protected get recentProjects(): Project[] {
-    const current = this.currentProject;
-    const remaining = this.projects.filter((project) => project.id !== current?.id);
-    return (current ? [current, ...remaining] : remaining).slice(0, 3);
-  }
-
   protected get authUserId(): string | null {
     return this.auth.user()?.id ?? null;
   }
@@ -148,7 +142,9 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected get projectsToShow(): Project[] {
-    return this.page === 'projects' ? this.filteredProjects : this.recentProjects;
+    if (this.page === 'projects') return this.filteredProjects;
+    const current = this.currentProject;
+    return current ? [current] : [];
   }
 
   protected get activeProjects(): Project[] {

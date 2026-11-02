@@ -78,6 +78,32 @@
       "sectionName": null,
       "id": "7fe9f713-4725-4fb8-82e9-52f21afa4c53",
       "createdAt": "2026-11-02T09:53:37.444Z"
+    },
+    {
+      "eventKey": "b2bb20a8-9f8f-42a7-a4a8-5b445f653e7b:section:14e908ec-2f44-46dc-af67-e2fd07e9c1c2:2026-11-02T13:05:03.218Z",
+      "userId": "87dd7db3-ee27-4c1a-bb66-4d209fccf10e",
+      "projectId": "b2bb20a8-9f8f-42a7-a4a8-5b445f653e7b",
+      "projectName": "Claras erster Pullover",
+      "projectImage": null,
+      "projectType": "knitting",
+      "projectCategory": "sweater",
+      "type": "section_completed",
+      "sectionName": "Vorderseite",
+      "id": "b5171b26-69be-45cd-80ab-34f116cbedc1",
+      "createdAt": "2026-11-02T13:05:03.346Z"
+    },
+    {
+      "eventKey": "b2bb20a8-9f8f-42a7-a4a8-5b445f653e7b:section:f47ecfcf-6775-4eb6-9c71-cb25a95ed0b0:2026-11-02T13:05:08.422Z",
+      "userId": "87dd7db3-ee27-4c1a-bb66-4d209fccf10e",
+      "projectId": "b2bb20a8-9f8f-42a7-a4a8-5b445f653e7b",
+      "projectName": "Claras erster Pullover",
+      "projectImage": null,
+      "projectType": "knitting",
+      "projectCategory": "sweater",
+      "type": "section_completed",
+      "sectionName": "Vorderseite Kragen rechts",
+      "id": "95b6a801-2f9c-4074-8344-60895b07a702",
+      "createdAt": "2026-11-02T13:05:08.536Z"
     }
   ]
 }

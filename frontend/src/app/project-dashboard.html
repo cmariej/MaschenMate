@@ -1,7 +1,7 @@
 <div class="project-dashboard">
   @if (view === 'list') {
   @if (page === 'yarns' || page === 'needles') {
-    <header class="dashboard-heading">
+    <header class="dashboard-heading materials-page-heading">
       <div>
         <span class="eyebrow">Dein Vorrat</span>
         <h1>{{ page === 'yarns' ? 'Meine Garne' : 'Meine Nadeln' }}</h1>
@@ -16,7 +16,7 @@
     @if (error) { <p class="notice error-notice" role="alert">{{ error }}</p> }
     @if (page === 'yarns') {
       <details class="yarn-filters">
-        <summary class="yarn-filter-heading">
+        <summary class="disclosure-summary yarn-filter-heading">
           <strong>Garne filtern</strong>
           <span class="filter-summary-count">
           @if (yarnNeedleSizeFilters.length || yarnColorFilters.length || yarnMaterialFilters.length) {
@@ -82,7 +82,7 @@
     }
   } @else {
   @if (page === 'projects') {
-    <header class="dashboard-heading">
+    <header class="dashboard-heading projects-page-heading">
       <div>
         <h1>Meine Projekte</h1>
         <p>Deine vollständige Projektübersicht.</p>
@@ -121,7 +121,7 @@
           </div>
         } @else if (currentSection; as section) {
           <details class="section-picker section-choice-menu" #sectionChooser>
-            <summary class="section-choice-summary">
+            <summary class="disclosure-summary section-choice-summary">
               <span>Abschnitt</span><strong>{{ section.name }}</strong><small>{{ sectionPercent(project, section) }}%</small>
             </summary>
             <div class="section-choice-list" role="group" aria-label="Aktuellen Abschnitt auswählen">
@@ -179,19 +179,17 @@
   <section class="project-list">
     <div class="section-heading">
       <div>
-        <span class="eyebrow">Deine Sammlung</span>
-        <h2>{{ page === 'projects' ? 'Alle Projekte' : 'Zuletzt bearbeitet' }}</h2>
+        <span class="eyebrow">{{ page === 'projects' ? 'Deine Sammlung' : 'Im Fokus' }}</span>
+        <h2>{{ page === 'projects' ? 'Alle Projekte' : 'Mein aktuelles Projekt' }}</h2>
       </div>
-      @if (page === 'home') {
-        <button class="subtle-button" type="button" (click)="showPage('projects')">Weitere Projekte</button>
-      } @else {
-        <span class="project-count">{{ page === 'projects' ? filteredProjects.length : recentProjects.length }} {{ (page === 'projects' ? filteredProjects.length : recentProjects.length) === 1 ? 'Projekt' : 'Projekte' }}</span>
+      @if (page === 'projects') {
+        <span class="project-count">{{ filteredProjects.length }} {{ filteredProjects.length === 1 ? 'Projekt' : 'Projekte' }}</span>
       }
     </div>
 
     @if (page === 'projects') {
       <details class="project-filters">
-        <summary class="yarn-filter-heading">
+        <summary class="disclosure-summary yarn-filter-heading">
           <strong>Projekte filtern</strong>
           <span class="filter-summary-count">
             @if (activeProjectFilterCount) {
@@ -236,6 +234,8 @@
         <p>Lege ein Häkel- oder Strickprojekt an und halte Anleitung, Material und Fortschritt fest.</p>
         <button class="primary-button icon-action-button" type="button" (click)="openNewProject()" aria-label="Projekt anlegen" title="Projekt anlegen"><app-fa-icon [icon]="faPlus" /></button>
       </div>
+      } @else if (page === 'home') {
+        <div class="empty-state"><p>Du hast aktuell kein laufendes Projekt. Starte ein Projekt in deiner Projektübersicht.</p><button class="subtle-button" type="button" (click)="showPage('projects')">Zu deinen Projekten</button></div>
       } @else {
         <div class="empty-state"><p>Keine Projekte für diese Kategorie gefunden.</p></div>
       }
@@ -251,6 +251,11 @@
           />
         }
       </div>
+      @if (page === 'home') {
+        <div class="current-project-footer">
+          <button class="subtle-button" type="button" (click)="showPage('projects')">Weitere Projekte</button>
+        </div>
+      }
     }
   </section>
   @if (page === 'home') {

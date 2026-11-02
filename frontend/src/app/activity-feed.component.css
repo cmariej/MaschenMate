@@ -32,6 +32,17 @@
   opacity: .6;
 }
 
+.section-heading .feed-refresh-button {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  place-items: center;
+  padding: 0;
+  font-size: 17px;
+}
+
 .error-notice {
   margin: 0 0 12px;
   padding: 11px 13px;
@@ -44,7 +55,7 @@
 .feed-section h2 {
   margin: 4px 0 0;
   color: #563c50;
-  font: 400 28px Georgia, 'Times New Roman', serif;
+  font: 400 21px / 1.3 Georgia, 'Times New Roman', serif;
 }
 
 .eyebrow {
@@ -193,15 +204,98 @@
   text-align: center;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 650px) {
+  .feed-section > .section-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+  }
+
+  .feed-section > .section-heading > div {
+    display: contents;
+  }
+
+  .feed-section .eyebrow {
+    grid-column: 1 / -1;
+    line-height: 1.5;
+  }
+
+  .feed-section h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .feed-item {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .feed-actor {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    align-items: start;
+    gap: 3px 10px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .feed-actor-avatar {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .feed-actor-content {
+    display: block;
+    grid-column: 2;
+    overflow-wrap: anywhere;
+  }
+
+  .feed-actor-username {
+    margin-left: 5px;
+    font-size: 12px;
+  }
+
+  .feed-actor-message {
+    display: block;
+    margin-top: 2px;
+  }
+
   .feed-actor time {
-    width: 100%;
-    margin-left: 48px;
+    grid-column: 2;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .feed-project {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
   }
 
   .feed-project-image,
   .feed-project-placeholder {
-    width: 58px;
-    height: 58px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .feed-project-info {
+    flex: 1;
+  }
+
+  .feed-project-info h3 {
+    margin-bottom: 7px;
+    line-height: 1.3;
+  }
+
+  .feed-project-labels {
+    gap: 5px;
+  }
+
+  .feed-project-labels > * {
+    padding: 3px 7px;
+    font-size: 11px;
+    line-height: 1.4;
   }
 }

@@ -38,12 +38,12 @@ interface YarnUsage {
       </header>
       @if (project.image) { <img class="detail-project-image" [src]="project.image" [alt]="'Bild für ' + project.name" /> }
       <div class="detail-content">
-        <section class="detail-block progress-card" aria-labelledby="progress-title">
-          <header class="progress-heading">
-            <div><span class="progress-eyebrow">Dein Projekt</span><h3 id="progress-title">Allgemeiner Fortschritt</h3></div>
+        <details class="detail-block progress-card" aria-labelledby="progress-title">
+          <summary class="disclosure-summary progress-heading">
+            <div><h3 id="progress-title">Mein Fortschritt</h3></div>
             <strong class="progress-badge">{{ progress }}%</strong>
-          </header>
-          <div class="progress-track" role="progressbar" aria-label="Gesamtfortschritt des Projekts" [attr.aria-valuenow]="progress" aria-valuemin="0" aria-valuemax="100"><span [style.width.%]="progress"></span></div>
+            <div class="progress-track" role="progressbar" aria-label="Gesamtfortschritt des Projekts" [attr.aria-valuenow]="progress" aria-valuemin="0" aria-valuemax="100"><span [style.width.%]="progress"></span></div>
+          </summary>
           @if (project.progress.startedAt && !project.progress.cancelledAt && !completed && !isCurrentProject) {
             <button class="make-current-project-button" type="button" [disabled]="busy" (click)="makeCurrent.emit()">Als aktuelles Projekt festlegen</button>
           }
@@ -101,30 +101,7 @@ interface YarnUsage {
               <button class="cancel-project-link" type="button" [disabled]="busy" (click)="cancelPending = true">Projekt abbrechen</button>
             }
           }
-        </section>
-        @if (project.yarns.length) {
-          <section class="detail-block yarn-usage-block" aria-labelledby="yarn-usage-title">
-            <h4 id="yarn-usage-title">Garnbedarf und Verbrauch</h4>
-            <p class="usage-explanation">Der Bedarf kommt aus deiner Angabe oder wird bei manuellen Anleitungen mit einer gewogenen 10 × 10-cm-Maschenprobe geschätzt.</p>
-            <div class="yarn-usage-list">
-              @for (yarn of project.yarns; track yarn.id) {
-                @let usage = yarnUsage(yarn);
-                <article class="yarn-usage-item">
-                  <h5>{{ yarn.name }}</h5>
-                  @if (usage.requiredSkeins === null && usage.consumedWholeSkeins === null && usage.remainingSkeins === null) {
-                    <div class="yarn-usage-unknown"><strong>Unbekannt</strong><small>Bedarf und Verbrauch lassen sich mit den vorhandenen Daten nicht berechnen.</small></div>
-                  } @else {
-                    <div class="yarn-usage-metrics">
-                    <span>Insgesamt<strong>@if (usage.requiredMeters !== null && usage.requiredSkeins !== null) { {{ formatMeters(usage.requiredMeters) }} m · {{ usage.requiredSkeins }} Knäuel } @else { Unbekannt }</strong><small>@if (usage.source === 'pattern') { Angabe laut Anleitung } @else if (usage.source === 'estimate') { Geschätzt inklusive 10 % Reserve } @else { Kein Bedarf eingetragen oder mit den verfügbaren Daten schätzbar }</small></span>
-                    <span>Aktueller Knäuelverbrauch<strong>@if (usage.consumedWholeSkeins !== null) { {{ usage.consumedWholeSkeins }} Knäuel @if (usage.openedSkein) { + 1 angefangenes Knäuel } } @else { Unbekannt }</strong><small>@if (usage.consumedMeters !== null) { ca. {{ formatMeters(usage.consumedMeters) }} m @if (usage.consumptionSource === 'swatch') { · anhand der Maschenprobe } @else if (usage.consumptionSource === 'pattern') { · nach erledigtem Maschenanteil geschätzt } } @else { Für eine Verbrauchsschätzung fehlen messbare Daten. }</small></span>
-                    <span>Aktuell noch benötigte Knäuel<strong>@if (usage.remainingSkeins !== null) { {{ usage.remainingSkeins }} Knäuel } @else { Unbekannt }</strong><small>@if (usage.remainingSkeins !== null) { Gesamtbedarf abzüglich vollständig verbrauchter und angefangener Knäuel } @else { Nicht berechenbar, solange Bedarf oder Verbrauch unbekannt sind }</small></span>
-                    </div>
-                  }
-                </article>
-              }
-            </div>
-          </section>
-        }
+        </details>
         @if (project.instructionMode !== 'pdf') {
         <section class="instructions-accordion">
           <header class="instructions-heading instructions-fixed-heading">
@@ -139,7 +116,7 @@ interface YarnUsage {
           <div class="instructions-content">
           @for (section of project.sections; track section.id) {
             <details class="detail-block pattern-section" [attr.aria-label]="'Abschnitt ' + section.name">
-            <summary class="pattern-section-heading">
+            <summary class="disclosure-summary pattern-section-heading">
               <h3>{{ section.name }}</h3>
               <span class="section-progress">{{ sectionProgress[section.id] ?? 0 }}%</span>
             </summary>
@@ -207,9 +184,32 @@ interface YarnUsage {
             }
           </section>
         }
+        @if (project.yarns.length) {
+          <section class="detail-block yarn-usage-block" aria-labelledby="yarn-usage-title">
+            <h4 id="yarn-usage-title">Garnbedarf und Verbrauch</h4>
+            <p class="usage-explanation">Der Bedarf kommt aus deiner Angabe oder wird bei manuellen Anleitungen mit einer gewogenen 10 × 10-cm-Maschenprobe geschätzt.</p>
+            <div class="yarn-usage-list">
+              @for (yarn of project.yarns; track yarn.id) {
+                @let usage = yarnUsage(yarn);
+                <article class="yarn-usage-item">
+                  <h5>{{ yarn.name }}</h5>
+                  @if (usage.requiredSkeins === null && usage.consumedWholeSkeins === null && usage.remainingSkeins === null) {
+                    <div class="yarn-usage-unknown"><strong>Unbekannt</strong><small>Bedarf und Verbrauch lassen sich mit den vorhandenen Daten nicht berechnen.</small></div>
+                  } @else {
+                    <div class="yarn-usage-metrics">
+                    <span>Insgesamt<strong>@if (usage.requiredMeters !== null && usage.requiredSkeins !== null) { {{ formatMeters(usage.requiredMeters) }} m · {{ usage.requiredSkeins }} Knäuel } @else { Unbekannt }</strong><small>@if (usage.source === 'pattern') { Angabe laut Anleitung } @else if (usage.source === 'estimate') { Geschätzt inklusive 10 % Reserve } @else { Kein Bedarf eingetragen oder mit den verfügbaren Daten schätzbar }</small></span>
+                    <span>Aktueller Knäuelverbrauch<strong>@if (usage.consumedWholeSkeins !== null) { {{ usage.consumedWholeSkeins }} Knäuel @if (usage.openedSkein) { + 1 angefangenes Knäuel } } @else { Unbekannt }</strong><small>@if (usage.consumedMeters !== null) { ca. {{ formatMeters(usage.consumedMeters) }} m @if (usage.consumptionSource === 'swatch') { · anhand der Maschenprobe } @else if (usage.consumptionSource === 'pattern') { · nach erledigtem Maschenanteil geschätzt } } @else { Für eine Verbrauchsschätzung fehlen messbare Daten. }</small></span>
+                    <span>Aktuell noch benötigte Knäuel<strong>@if (usage.remainingSkeins !== null) { {{ usage.remainingSkeins }} Knäuel } @else { Unbekannt }</strong><small>@if (usage.remainingSkeins !== null) { Gesamtbedarf abzüglich vollständig verbrauchter und angefangener Knäuel } @else { Nicht berechenbar, solange Bedarf oder Verbrauch unbekannt sind }</small></span>
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+        }
         @if (project.progress.changelog.length) {
           <details class="instructions-accordion history-accordion">
-            <summary class="instructions-heading">
+            <summary class="disclosure-summary instructions-heading">
               <span>Verlauf</span>
               <small>{{ project.progress.changelog.length }} {{ project.progress.changelog.length === 1 ? 'Eintrag' : 'Einträge' }}</small>
             </summary>

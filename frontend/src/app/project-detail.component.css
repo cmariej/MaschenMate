@@ -91,11 +91,38 @@
 }
 
 .progress-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.progress-heading::-webkit-details-marker {
+  display: none;
+}
+
+.progress-heading > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.progress-card:not([open]) > .progress-heading {
+  margin-bottom: 0;
+}
+
+.progress-heading:focus-visible {
+  outline: 3px solid rgb(185 142 170 / 45%);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.progress-heading::after {
+  grid-column: 3;
+  grid-row: 1;
 }
 
 .progress-eyebrow {
@@ -107,10 +134,10 @@
 }
 
 .progress-heading h3 {
-  margin: 3px 0 0;
+  margin: 0;
   color: #563c50;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 400;
 }
 
@@ -127,9 +154,11 @@
   font-size: 17px;
 }
 
-.progress-card > .progress-track {
+.progress-heading > .progress-track {
+  grid-column: 1 / -1;
+  width: 100%;
   height: 9px;
-  margin-bottom: 17px;
+  margin: 0;
 }
 
 .make-current-project-button {
@@ -435,18 +464,6 @@
   display: none;
 }
 
-.instructions-heading::after {
-  content: '+';
-  margin-left: auto;
-  color: #9c7893;
-  font-family: Arial, sans-serif;
-  font-size: 20px;
-}
-
-.instructions-accordion[open] .instructions-heading::after {
-  content: '−';
-}
-
 .instructions-heading small {
   color: #958790;
   font-family: Arial, sans-serif;
@@ -530,19 +547,8 @@
   display: none;
 }
 
-.pattern-section-heading::after {
-  content: '+';
-  color: #9c7893;
-  font-family: Arial, sans-serif;
-  font-size: 18px;
-}
-
 .pattern-section[open] > .pattern-section-heading {
   margin-bottom: 10px;
-}
-
-.pattern-section[open] > .pattern-section-heading::after {
-  content: '−';
 }
 
 .pattern-section-content {
