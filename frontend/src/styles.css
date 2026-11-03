@@ -1737,3 +1737,5 @@ details[open] > .disclosure-summary::after {
     line-height: 1.3;
   }
 }
+
+.section-notes { white-space: pre-wrap; overflow-wrap: anywhere; }

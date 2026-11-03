@@ -1,3 +1,4 @@
+import { materialId } from './material-selection';
 import { afterNextRender, ChangeDetectorRef, Component, DestroyRef, ElementRef, Injector, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { faBookOpen, faFolderOpen, faHouse, faMinus, faPlus, faTrashCan, faShareNodes, faUser } from '@fortawesome/free-solid-svg-icons';
@@ -61,7 +62,6 @@ export class ProjectDashboard implements OnInit {
   private pendingFeedActivityId = typeof history.state?.feedActivityId === 'string' ? history.state.feedActivityId : '';
   private readonly destroyRef = inject(DestroyRef);
   private readonly projectService = inject(ProjectService);
-  private readonly progressSectionCache = new WeakMap<Project, ProjectSection[]>();
   private preferredCurrentProjectId = '';
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -768,19 +768,12 @@ export class ProjectDashboard implements OnInit {
   protected toggleProjectYarn(yarn: Yarn, checked: boolean): void {
     if (checked) this.draft.yarns.push(this.normalizeProjectYarn({ ...yarn, id: this.createId() }));
     else this.draft.yarns = this.draft.yarns.filter((item) => item.id !== yarn.id);
-    const defaultYarnId = this.draft.yarns[0]?.id;
-    for (const section of this.draft.sections) {
+    if (!checked) for (const section of this.draft.sections) {
+      if (section.yarnId === yarn.id) section.yarnId = undefined;
       for (const entry of section.entries) {
-        if (entry.type === 'range') {
-          if (entry.yarnId === yarn.id && !checked) entry.yarnId = defaultYarnId;
-          else if (!entry.yarnId) entry.yarnId = defaultYarnId;
-        } else {
-          if (entry.yarnId === yarn.id && !checked) entry.yarnId = defaultYarnId;
-          else if (!entry.yarnId) entry.yarnId = defaultYarnId;
-          for (const row of entry.repeatRows) {
-            if (row.yarnId === yarn.id && !checked) row.yarnId = entry.yarnId ?? defaultYarnId;
-            else if (!row.yarnId) row.yarnId = entry.yarnId ?? defaultYarnId;
-          }
+        if (entry.yarnId === yarn.id) entry.yarnId = undefined;
+        if (entry.type === 'repeat') for (const row of entry.repeatRows) {
+          if (row.yarnId === yarn.id) row.yarnId = undefined;
         }
       }
     }
@@ -789,8 +782,14 @@ export class ProjectDashboard implements OnInit {
   protected toggleProjectNeedle(needle: Needle, checked: boolean): void {
     if (checked) this.draft.needles.push({ ...structuredClone(needle), id: this.createId() });
     else this.draft.needles = this.draft.needles.filter((item) => item.id !== needle.id);
-    for (const section of this.draft.sections) {
-      if (section.needleId === needle.id && !checked) section.needleId = undefined;
+    if (!checked) for (const section of this.draft.sections) {
+      if (section.needleId === needle.id) section.needleId = undefined;
+      for (const entry of section.entries) {
+        if (entry.needleId === needle.id) entry.needleId = undefined;
+        if (entry.type === 'repeat') for (const row of entry.repeatRows) {
+          if (row.needleId === needle.id) row.needleId = undefined;
+        }
+      }
     }
   }
 
@@ -885,7 +884,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected addRange(section: ProjectSection): void {
-    const lastRow = this.lastRow(section);
+    const lastRow = section.entries.reduce((last, entry) => Math.max(last, entry.toRow), 0);
     const entry: InstructionRange = {
       id: this.createId(),
       type: 'range',
@@ -893,28 +892,28 @@ export class ProjectDashboard implements OnInit {
       toRow: lastRow + 1,
       instructions: '',
       stitchesPerRow: 1,
-      yarnId: this.draft.yarns[0]?.id,
+      yarnId: undefined,
     };
     section.entries.push(entry);
   }
 
   protected addRepeat(section: ProjectSection): void {
-    const lastRow = this.lastRow(section);
+    const lastRow = section.entries.reduce((last, entry) => Math.max(last, entry.toRow), 0);
     const entry: InstructionRepeat = {
       id: this.createId(),
       type: 'repeat',
       fromRow: lastRow + 1,
       toRow: lastRow + 10,
       repeatRows: [
-        { instructions: '', stitchesPerRow: 1, yarnId: this.draft.yarns[0]?.id },
-        { instructions: '', stitchesPerRow: 1, yarnId: this.draft.yarns[0]?.id },
+        { instructions: '', stitchesPerRow: 1, yarnId: undefined },
+        { instructions: '', stitchesPerRow: 1, yarnId: undefined },
       ],
     };
     section.entries.push(entry);
   }
 
   protected addRepeatRow(entry: InstructionRepeat): void {
-    entry.repeatRows.push({ instructions: '', stitchesPerRow: 1, yarnId: this.draft.yarns[0]?.id });
+    entry.repeatRows.push({ instructions: '', stitchesPerRow: 1, yarnId: undefined });
   }
 
   protected async onProjectImageSelected(event: Event): Promise<void> {
@@ -1004,7 +1003,7 @@ export class ProjectDashboard implements OnInit {
         this.pendingInstructionPdf = file;
         draft.instructionPdf = `data:application/pdf;base64,${encoded}`;
         draft.instructionPdfName = file.name;
-        draft.instructionMode = 'pdf';
+        draft.instructionMode = 'manual';
       } catch (error) {
         this.instructionPdfError = this.editorError = error instanceof Error && error.message ? error.message : 'Die PDF-Datei konnte nicht gelesen werden.';
       } finally {
@@ -1024,9 +1023,9 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected saveProject(): void {
-    if (this.processingProjectImage || this.processingInstructionPdf || (this.draft.instructionMode === 'pdf' && this.instructionPdfError)) return;
+    if (this.processingProjectImage || this.processingInstructionPdf || this.instructionPdfError) return;
     this.editorError = '';
-    if (!this.draft.instructionPdfName || this.draft.instructionMode !== 'pdf') this.pendingInstructionPdf = null;
+    if (!this.draft.instructionPdfName) this.pendingInstructionPdf = null;
     this.draft.progress ??= { startedAt: null, activeSectionId: null, completedRows: {}, changelog: [] };
     this.draft.progress.pdfProgress ??= 0;
     this.draft.progress.completedRows ??= {};
@@ -1108,18 +1107,8 @@ export class ProjectDashboard implements OnInit {
     if (project.patternYarn && !this.isPositiveFinite(project.patternYarn.amount, 1_000_000)) return 'Bitte gib eine gültige Garnmenge für die Maschenprobe ein.';
     if (project.gauge && (!this.isPositiveFinite(project.gauge.pattern.stitches, 1000) || !this.isPositiveFinite(project.gauge.pattern.rows, 1000) || !this.isPositiveFinite(project.gauge.personal.stitches, 1000) || !this.isPositiveFinite(project.gauge.personal.rows, 1000))) return 'Bitte prüfe die Maschenprobe.';
 
-    if (this.instructionOnlyEditor && project.instructionMode === 'pdf') {
-      if (!project.instructionPdf && !project.instructionPdfName) return 'Bitte lade eine gültige PDF-Anleitung hoch.';
-      if (!project.instructionPdfName?.trim() || project.instructionPdfName.length > 255) return 'Der Dateiname der PDF-Anleitung ist ungültig.';
-      const pdfSectionIds = new Set<string>();
-      for (const section of project.pdfSections) {
-        if (!section.id || pdfSectionIds.has(section.id)) return 'Jeder PDF-Abschnitt braucht eine eindeutige Kennung.';
-        pdfSectionIds.add(section.id);
-        if (!section.name.trim() || section.name.trim().length > 100) return 'Bitte gib jedem PDF-Abschnitt einen Namen mit höchstens 100 Zeichen.';
-        if (!Number.isInteger(section.rowCount) || section.rowCount < 1 || section.rowCount > 10_000) return `Bitte gib für „${section.name}“ eine Reihenanzahl zwischen 1 und 10.000 ein.`;
-      }
-    } else if (this.instructionOnlyEditor) {
-      if (project.sections.length === 0) return 'Bitte füge mindestens einen Abschnitt mit einer Anleitung hinzu.';
+    if (project.instructionPdfName && project.instructionPdfName.length > 255) return 'Der PDF-Dateiname ist zu lang.';
+    if (this.instructionOnlyEditor) {
       const sectionIds = new Set<string>();
       const needleIds = new Set(project.needles.map((needle) => needle.id));
       const yarnIds = new Set(project.yarns.map((yarn) => yarn.id));
@@ -1127,13 +1116,16 @@ export class ProjectDashboard implements OnInit {
         if (!section.id || sectionIds.has(section.id)) return 'Jeder Anleitungsabschnitt braucht eine eindeutige Kennung.';
         sectionIds.add(section.id);
         if (!section.name.trim() || section.name.trim().length > 100) return 'Bitte gib jedem Abschnitt einen Namen mit höchstens 100 Zeichen.';
+        if (section.yarnId && !yarnIds.has(section.yarnId)) return 'Das Abschnittsgarn ist nicht mehr vorhanden.';
         if (section.needleId && !needleIds.has(section.needleId)) return `Die ausgewählte Nadel im Abschnitt „${section.name}“ ist nicht mehr vorhanden.`;
-        if (section.entries.length === 0) return `Bitte füge im Abschnitt „${section.name}“ mindestens eine Reihenanweisung hinzu.`;
+        if ((section.notes ?? '').length > 5000) return 'Die Notiz darf höchstens 5.000 Zeichen lang sein.';
+        if (section.rowCount != null && (!Number.isInteger(section.rowCount) || section.rowCount < 1 || section.rowCount > 10000)) return 'Bitte gib eine Reihenanzahl zwischen 1 und 10.000 ein.';
         if (section.entries.length > 300) return `Der Abschnitt „${section.name}“ enthält zu viele Anweisungen.`;
         if (this.sectionRows(section).length !== this.lastRow(section)) return `Die Reihen im Abschnitt „${section.name}“ müssen lückenlos und ohne Überschneidungen ab Reihe 1 eingetragen sein.`;
         if (this.lastRow(section) > 10_000) return `Der Abschnitt „${section.name}“ darf höchstens 10.000 Reihen enthalten.`;
         for (const entry of section.entries) {
           if (!entry.id || !Number.isInteger(entry.fromRow) || !Number.isInteger(entry.toRow) || entry.fromRow < 1 || entry.toRow < entry.fromRow || entry.toRow > 100_000) return `Bitte prüfe die Reihenangaben im Abschnitt „${section.name}“.`;
+          if (entry.needleId && !needleIds.has(entry.needleId)) return 'Die Anweisungsnadel ist nicht mehr vorhanden.';
           if (entry.yarnId && !yarnIds.has(entry.yarnId)) return `Das ausgewählte Garn im Abschnitt „${section.name}“ ist nicht mehr vorhanden.`;
           if (entry.type === 'range') {
             if (!entry.instructions.trim() || entry.instructions.trim().length > 500 || !Number.isInteger(entry.stitchesPerRow) || entry.stitchesPerRow < 1 || entry.stitchesPerRow > 100_000) return `Bitte ergänze Anweisung und Maschenzahl im Abschnitt „${section.name}“.`;
@@ -1141,6 +1133,7 @@ export class ProjectDashboard implements OnInit {
             if (entry.repeatRows.length === 0 || entry.repeatRows.length > 100) return `Die Reihenwiederholung im Abschnitt „${section.name}“ braucht 1 bis 100 Musterreihen.`;
             for (const row of entry.repeatRows) {
               if (!row.instructions.trim() || row.instructions.trim().length > 500 || !Number.isInteger(row.stitchesPerRow) || row.stitchesPerRow < 1 || row.stitchesPerRow > 100_000) return `Bitte ergänze alle Musterreihen im Abschnitt „${section.name}“ vollständig.`;
+              if (row.needleId && !needleIds.has(row.needleId)) return 'Die Reihennadel ist nicht mehr vorhanden.';
               if (row.yarnId && !yarnIds.has(row.yarnId)) return `Das ausgewählte Garn im Abschnitt „${section.name}“ ist nicht mehr vorhanden.`;
             }
           }
@@ -1162,19 +1155,10 @@ export class ProjectDashboard implements OnInit {
 
   protected startProject(project: Project): void {
     if (project.progress.cancelledAt) return;
-    if (project.instructionMode !== 'pdf' && !project.sections.length) {
-      this.error = 'Füge zuerst mindestens einen Anleitungsabschnitt hinzu.';
-      return;
-    }
     const next = structuredClone(project);
     const timestamp = new Date().toISOString();
     next.progress.startedAt = timestamp;
-    if (next.instructionMode === 'pdf') {
-      const firstSectionId = next.pdfSections[0]?.id ?? null;
-      if (!next.pdfSections.some((section) => section.id === next.progress.activeSectionId)) next.progress.activeSectionId = firstSectionId;
-    } else {
-      next.progress.activeSectionId ??= next.sections[0].id;
-    }
+    next.progress.activeSectionId ??= next.sections[0]?.id ?? null;
     next.progress.changelog.push({
       id: this.createId(),
       type: 'started',
@@ -1185,7 +1169,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected changePdfProgress(project: Project, delta: -10 | 10): void {
-    if (project.instructionMode !== 'pdf' || project.pdfSections.length > 0 || !project.progress.startedAt || project.progress.cancelledAt) return;
+    if (project.sections.length > 0 || !project.progress.startedAt || project.progress.cancelledAt) return;
     const current = project.progress.pdfProgress ?? 0;
     const updated = Math.max(0, Math.min(100, current + delta));
     if (updated === current) return;
@@ -1320,15 +1304,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected progressPercent(project: Project): number {
-    if (project.instructionMode === 'pdf') {
-      if (!project.pdfSections.length) return project.progress.pdfProgress ?? 0;
-      const totalRows = project.pdfSections.reduce((total, section) => total + section.rowCount, 0);
-      const completedRows = project.pdfSections.reduce(
-        (total, section) => total + Math.min(section.rowCount, project.progress.completedRows[section.id] ?? 0),
-        0,
-      );
-      return totalRows ? Math.round(completedRows / totalRows * 100) : 0;
-    }
+    if (!project.sections.length) return project.progress.pdfProgress ?? 0;
     let totalStitches = 0;
     let completedStitches = 0;
     for (const section of project.sections) {
@@ -1359,13 +1335,9 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected projectCompleted(project: Project): boolean {
-    if (project.instructionMode === 'pdf') {
-      return project.pdfSections.length
-        ? project.pdfSections.every((section) => (project.progress.completedRows[section.id] ?? 0) >= section.rowCount)
-        : (project.progress.pdfProgress ?? 0) >= 100;
-    }
+    if (!project.sections.length) return (project.progress.pdfProgress ?? 0) >= 100;
     return project.sections.length > 0 && project.sections.every(
-      (section) => this.sectionCompletedRows(project, section) >= this.sectionRows(section).length,
+      (section) => this.sectionRows(section).length > 0 && this.sectionCompletedRows(project, section) >= this.sectionRows(section).length,
     );
   }
 
@@ -1407,30 +1379,12 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected needleNameById(needleId: string | undefined, needles: Needle[] = this.draft.needles): string {
-    const needle = needles.find((item) => item.id === needleId);
-    return needle ? this.needleName(needle) : 'Keine Nadel ausgewählt';
+    const needle = needles.find((item) => item.id === materialId(needles, needleId));
+    return needle ? this.needleName(needle) : 'Unbekannt';
   }
 
   protected trackingSections(project: Project | ProjectInput): ProjectSection[] {
-    if (project.instructionMode !== 'pdf') return project.sections;
-    if ('id' in project) {
-      const cached = this.progressSectionCache.get(project);
-      if (cached) return cached;
-    }
-    const sections = project.pdfSections.map((section) => ({
-      id: section.id,
-      name: section.name,
-      entries: [{
-        id: section.id,
-        type: 'range' as const,
-        fromRow: 1,
-        toRow: section.rowCount,
-        instructions: 'PDF-Reihe',
-        stitchesPerRow: 1,
-      }],
-    }));
-    if ('id' in project) this.progressSectionCache.set(project, sections);
-    return sections;
+    return project.sections;
   }
 
   private progressSection(project: Project, sectionId: string | null): ProjectSection | null {
@@ -1439,6 +1393,10 @@ export class ProjectDashboard implements OnInit {
 
   protected sectionRows(section: ProjectSection): ExpandedRow[] {
     const rows = new Map<number, ExpandedRow>();
+    const yarns = this.draft.sections.includes(section)
+      ? this.draft.yarns
+      : this.projects.find(project => project.sections.includes(section))?.yarns ?? [];
+    if (!section.entries.length) return Array.from({ length: section.rowCount ?? 0 }, (_, index) => ({ number: index + 1, stitches: 1, instructions: section.notes ?? '', yarnId: undefined }));
     for (const entry of section.entries) {
       const width = entry.toRow - entry.fromRow + 1;
       if (entry.fromRow < 1 || width < 1 || width > 100_000) continue;
@@ -1452,7 +1410,7 @@ export class ProjectDashboard implements OnInit {
             number: rowNumber,
             stitches: instruction.stitchesPerRow,
             instructions: instruction.instructions,
-            yarnId: instruction.yarnId ?? entry.yarnId ?? undefined,
+            yarnId: materialId(yarns, instruction.yarnId, entry.yarnId, section.yarnId),
           });
         }
       }
@@ -1461,7 +1419,7 @@ export class ProjectDashboard implements OnInit {
   }
 
   protected lastRow(section: ProjectSection): number {
-    return section.entries.reduce((max, entry) => Math.max(max, entry.toRow), 0);
+    return section.entries.reduce((max, entry) => Math.max(max, entry.toRow), section.entries.length ? 0 : section.rowCount ?? 0);
   }
 
   private normalizeLibraryYarn(yarn: Yarn): Yarn {
@@ -1497,7 +1455,6 @@ export class ProjectDashboard implements OnInit {
     const legacy = project as Project & { category?: ProjectCategory; mainYarnId?: string | null };
     const normalized = { ...legacy };
     delete normalized.mainYarnId;
-    const defaultYarnId = legacy.yarns[0]?.id;
     return {
       ...normalized,
       category: legacy.category ?? 'other',
@@ -1510,16 +1467,8 @@ export class ProjectDashboard implements OnInit {
       pdfSections: legacy.pdfSections ?? [],
       progress: { ...legacy.progress, pdfProgress: legacy.progress.pdfProgress ?? 0 },
       yarns: legacy.yarns.map((yarn) => this.normalizeProjectYarn(yarn)),
-      sections: legacy.sections.map((section) => ({
-        ...section,
-        entries: section.entries.map((entry) => entry.type === 'range'
-          ? { ...entry, yarnId: entry.yarnId ?? defaultYarnId }
-          : {
-            ...entry,
-            yarnId: entry.yarnId ?? defaultYarnId,
-            repeatRows: entry.repeatRows.map((row) => ({ ...row, yarnId: row.yarnId ?? entry.yarnId ?? defaultYarnId })),
-          }),
-      })),
+      sections: legacy.sections,
+
     };
   }
 

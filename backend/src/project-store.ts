@@ -53,6 +53,7 @@ export interface InstructionRow {
   instructions: string;
   stitchesPerRow: number;
   yarnId?: string;
+  needleId?: string;
 }
 
 export interface InstructionRange extends InstructionRow {
@@ -69,6 +70,7 @@ export interface InstructionRepeat {
   toRow: number;
   repeatRows: InstructionRow[];
   yarnId?: string;
+  needleId?: string;
 }
 
 export type InstructionEntry = InstructionRange | InstructionRepeat;
@@ -76,7 +78,10 @@ export type InstructionEntry = InstructionRange | InstructionRepeat;
 export interface ProjectSection {
   id: string;
   name: string;
+  yarnId?: string;
   entries: InstructionEntry[];
+  notes?: string;
+  rowCount?: number | null;
   needleId?: string;
 }
 
@@ -168,10 +173,11 @@ export function normalizeStoredProject(project: Project): Project {
     ...legacy,
     category: legacy.category ?? 'other',
     size: legacy.size ?? '',
-    instructionMode: legacy.instructionMode ?? 'manual',
+    instructionMode: 'manual',
+    sections: [...(legacy.sections ?? []), ...(legacy.instructionMode === 'pdf' ? (legacy.pdfSections ?? []).filter(pdf => !legacy.sections?.some(section => section.id === pdf.id)).map(section => ({ ...section, entries: [] })) : [])],
     instructionPdf: legacy.instructionPdf ?? null,
     instructionPdfName: legacy.instructionPdfName ?? null,
-    pdfSections: legacy.pdfSections ?? [],
+    pdfSections: [],
     yarns: legacy.yarns.map((yarn) => ({
       ...yarn,
       needUnknown: yarn.needUnknown ?? (yarn.plannedSkeins == null),

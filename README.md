@@ -13,8 +13,8 @@ TODO:
 
 ssh lukara@192.168.188.65
 cd /srv/MaschenMate/MaschenMate/
-docker compose --env-file backend/.env.production down
 git pull
+docker compose --env-file backend/.env.production down
 docker compose --env-file backend/.env.production up -d --build
 
 

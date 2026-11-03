@@ -1,3 +1,5 @@
+import { materialId } from './material-selection';
+import { repeatRowLabel } from './repeat-row-label';
 import { ChangeDetectorRef, Component, DestroyRef, EventEmitter, Input, OnChanges, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { faArrowLeft, faPen } from '@fortawesome/free-solid-svg-icons';
@@ -76,13 +78,13 @@ interface YarnUsage {
             <p class="project-status cancelled-status">Projekt abgebrochen · {{ formatDate(project.progress.cancelledAt) }}</p>
           } @else if (completed) {
             <p class="project-status finished-status">Projekt fertiggestellt</p>
-          } @else if (project.instructionMode === 'pdf' && project.pdfSections.length === 0) {
+          } @else if (project.sections.length === 0) {
             <div class="pdf-progress-controls">
-              <p>PDF-Anleitung: Fortschritt in 10-%-Schritten</p>
+              <p>Fortschritt in 10-%-Schritten</p>
               <div class="pdf-progress-stepper">
-                <button type="button" aria-label="PDF-Fortschritt um 10 Prozent verringern" [disabled]="busy || (project.progress.pdfProgress ?? 0) === 0" (click)="pdfProgressChange.emit(-10)">-10%</button>
+                <button type="button" aria-label="Fortschritt um 10 Prozent verringern" [disabled]="busy || (project.progress.pdfProgress ?? 0) === 0" (click)="pdfProgressChange.emit(-10)">-10%</button>
                 <strong>{{ project.progress.pdfProgress ?? 0 }}%</strong>
-                <button type="button" aria-label="PDF-Fortschritt steigern" [disabled]="busy || (project.progress.pdfProgress ?? 0) === 100" (click)="pdfProgressChange.emit(10)">+10%</button>
+                <button type="button" aria-label="Fortschritt steigern" [disabled]="busy || (project.progress.pdfProgress ?? 0) === 100" (click)="pdfProgressChange.emit(10)">+10%</button>
               </div>
               <p class="pdf-progress-hint">Bei 100 % wird das Projekt als fertiggestellt markiert.</p>
             </div>
@@ -102,7 +104,7 @@ interface YarnUsage {
                         @if (nextRow; as row) {
                           <button class="small-button progress-row-complete-button" type="button" [disabled]="busy" [attr.aria-label]="'Reihe ' + row.number + ' im Abschnitt ' + section.name + ' fertig markieren'" (click)="completeRow.emit()">Reihe fertig</button>
                         } @else {
-                          <span class="section-done-note">Abschnitt abgeschlossen</span>
+                          <span class="section-done-note">{{ sectionRowCountFor(section) ? 'Abschnitt abgeschlossen' : 'Noch keine Reihen hinterlegt' }}</span>
                         }
                         <button class="small-button complete-section-button" type="button" [disabled]="busy || !nextRow" (click)="completeSection.emit()">Abschnitt abschließen</button>
                       }
@@ -152,7 +154,6 @@ interface YarnUsage {
             </div>
           </div>
         </section>
-        @if (project.instructionMode !== 'pdf') {
         <section class="instructions-accordion">
           <header class="instructions-heading instructions-fixed-heading">
             <div class="instructions-title-group">
@@ -170,12 +171,15 @@ interface YarnUsage {
               <h3>{{ section.name }}</h3>
             </summary>
             <div class="pattern-section-content">
+            @if (project.yarns.length > 1 || project.needles.length > 1) {
             <div class="section-materials">
+              @if (project.needles.length > 1) {
               <div class="section-needle">
                 <span class="material-label">Nadel</span>
-                <strong>{{ sectionNeedles[section.id] || 'Keine Nadel ausgewählt' }}</strong>
+                <strong>{{ sectionNeedles[section.id] || 'Unbekannt' }}</strong>
               </div>
-              @if (sectionYarns(section).length) {
+              }
+              @if (project.yarns.length > 1) {
                 <div class="section-yarns">
                   <span class="material-label">Verwendete Garne</span>
                   <div class="yarn-chip-list">
@@ -185,27 +189,36 @@ interface YarnUsage {
                         <span>{{ yarn.gauge.stitches }} M · {{ yarn.gauge.rows }} R / 10 × 10 cm</span>
                         @if (yarn.composition.length) { <small>{{ compositionLabel(yarn) }}</small> }
                       </span>
+                    } @empty {
+                      <strong>Unbekannt</strong>
                     }
                   </div>
                 </div>
               }
             </div>
+            }
+            @if (section.notes) { <p class="section-notes">{{ section.notes }}</p> }
+            @if (!section.entries.length && section.rowCount) { <p>{{ section.rowCount }} Reihen</p> }
             <div class="instruction-list">
             @for (entry of section.entries; track entry.id) {
               @if (entry.type === 'range') {
                 <div class="instruction-item">
                   <strong class="instruction-range">{{ rowRangeLabel(entry.fromRow, entry.toRow) }}:</strong>
                   <span>{{ rowCount(entry.fromRow, entry.toRow) }} {{ rowUnit(entry.fromRow, entry.toRow) }} à {{ entry.stitchesPerRow }} Maschen · {{ entry.instructions }}</span>
-                  <small>Garn: {{ yarnNameFor(entry.yarnId) }}</small>
+                  @if (project.yarns.length > 1 || project.needles.length > 1) {
+                  <small>@if (project.yarns.length > 1) { Garn: {{ yarnNameFor(entry.yarnId ?? section.yarnId) }} }@if (project.yarns.length > 1 && project.needles.length > 1) { &middot; }@if (project.needles.length > 1) { Nadel: {{ instructionNeedleName(entry.needleId ?? section.needleId) }} }</small>
+                  }
                 </div>
               } @else {
                 <div class="repeat-pattern">
                   <strong class="instruction-range">Musterwiederholung · {{ rowRangeLabel(entry.fromRow, entry.toRow) }}</strong>
                   @for (repeatRow of entry.repeatRows; track $index; let repeatIndex = $index) {
                     <div class="instruction-item repeat-row">
-                      <strong class="instruction-range">Musterreihe {{ $index + 1 }}:</strong>
+                      <strong class="instruction-range">{{ repeatRowLabel($index) }}:</strong>
                       <span>{{ repeatRowCount(entry, repeatIndex) }} {{ repeatRowUnit(entry, repeatIndex) }} à {{ repeatRow.stitchesPerRow }} Maschen · {{ repeatRow.instructions }}</span>
-                      <small>Garn: {{ yarnNameFor(repeatRow.yarnId ?? entry.yarnId) }}</small>
+                      @if (project.yarns.length > 1 || project.needles.length > 1) {
+                  <small>@if (project.yarns.length > 1) { Garn: {{ yarnNameFor(repeatRow.yarnId ?? entry.yarnId ?? section.yarnId) }} }@if (project.yarns.length > 1 && project.needles.length > 1) { &middot; }@if (project.needles.length > 1) { Nadel: {{ instructionNeedleName(repeatRow.needleId ?? entry.needleId ?? section.needleId) }} }</small>
+                  }
                     </div>
                   }
                 </div>
@@ -217,7 +230,7 @@ interface YarnUsage {
           }
           </div>
         </section>
-        } @else {
+        @if (project.instructionPdfName) {
           <section class="detail-block pdf-instruction-viewer" aria-labelledby="pdf-instruction-title">
             <div class="pdf-instruction-heading">
               <h4 id="pdf-instruction-title">PDF-Anleitung</h4>
@@ -303,6 +316,7 @@ interface YarnUsage {
   `,
 })
 export class ProjectDetailComponent implements OnChanges {
+  protected readonly repeatRowLabel = repeatRowLabel;
   protected readonly faArrowLeft = faArrowLeft;
   protected readonly faPen = faPen;
   protected instructionPdfData: Blob | null = null;
@@ -360,7 +374,7 @@ export class ProjectDetailComponent implements OnChanges {
   }
 
   protected sectionRowCountFor(section: Project['sections'][number]): number {
-    return section.entries.reduce((total, entry) => total + Math.max(0, entry.toRow - entry.fromRow + 1), 0);
+    return section.entries.reduce((total, entry) => total + Math.max(0, entry.toRow - entry.fromRow + 1), section.entries.length ? 0 : section.rowCount ?? 0);
   }
 
   protected needleLabel(needle: Project['needles'][number]): string {
@@ -388,7 +402,7 @@ export class ProjectDetailComponent implements OnChanges {
   ngOnChanges(): void {
     if (!this.project?.progress.cancelledAt) this.restartPending = false;
     if (this.templateSaved) this.templateFormOpen = false;
-    if (this.project?.instructionMode !== 'pdf') {
+    if (!this.project?.instructionPdfName) {
       this.clearPdf();
       return;
     }
@@ -421,8 +435,13 @@ export class ProjectDetailComponent implements OnChanges {
     this.pdfError = '';
   }
 
+  protected instructionNeedleName(id?: string): string {
+    const needle = this.project.needles.find(item => item.id === materialId(this.project.needles, id));
+    return needle ? this.needleLabel(needle) : 'Unbekannt';
+  }
+
   protected yarnNameFor(yarnId?: string): string {
-    return this.project.yarns.find((yarn) => yarn.id === (yarnId ?? this.project.yarns[0]?.id))?.name ?? 'Kein Garn ausgewählt';
+    return this.project.yarns.find((yarn) => yarn.id === materialId(this.project.yarns, yarnId))?.name ?? 'Unbekannt';
   }
 
   protected compositionLabel(yarn: Project['yarns'][number]): string {
@@ -470,8 +489,7 @@ export class ProjectDetailComponent implements OnChanges {
     const stitchEvents = this.yarnStitchEvents(yarn.id);
     const sampleStitchCount = yarn.gauge.stitches * yarn.gauge.rows;
     const sampleWeightPerTenCentimeters = yarn.swatchWeightGrams;
-    const hasCalibratedSwatch = this.project.instructionMode !== 'pdf'
-      && Number.isFinite(sampleWeightPerTenCentimeters)
+    const hasCalibratedSwatch = Number.isFinite(sampleWeightPerTenCentimeters)
       && (sampleWeightPerTenCentimeters ?? 0) > 0
       && sampleStitchCount > 0
       && stitchEvents.planned > 0;
@@ -514,7 +532,6 @@ export class ProjectDetailComponent implements OnChanges {
   private yarnStitchEvents(yarnId: string): { planned: number; completed: number } {
     let planned = 0;
     let completed = 0;
-    const defaultYarnId = this.project.yarns[0]?.id;
 
     for (const section of this.project.sections) {
       const completedRows = Math.max(0, Math.floor(this.project.progress.completedRows[section.id] ?? 0));
@@ -523,7 +540,7 @@ export class ProjectDetailComponent implements OnChanges {
         if (totalRows === 0) continue;
 
         if (entry.type === 'range') {
-          if ((entry.yarnId ?? defaultYarnId) !== yarnId) continue;
+          if (materialId(this.project.yarns, entry.yarnId, section.yarnId) !== yarnId) continue;
           planned += totalRows * entry.stitchesPerRow;
           const completedInRange = Math.min(totalRows, Math.max(0, completedRows - entry.fromRow + 1));
           completed += completedInRange * entry.stitchesPerRow;
@@ -534,7 +551,7 @@ export class ProjectDetailComponent implements OnChanges {
         const cycleLength = entry.repeatRows.length;
         const completedInEntry = Math.min(totalRows, Math.max(0, completedRows - entry.fromRow + 1));
         for (const [repeatIndex, repeatRow] of entry.repeatRows.entries()) {
-          if ((repeatRow.yarnId ?? entry.yarnId ?? defaultYarnId) !== yarnId) continue;
+          if (materialId(this.project.yarns, repeatRow.yarnId, entry.yarnId, section.yarnId) !== yarnId) continue;
           const plannedOccurrences = Math.floor(totalRows / cycleLength) + Number(repeatIndex < totalRows % cycleLength);
           const completedOccurrences = Math.floor(completedInEntry / cycleLength) + Number(repeatIndex < completedInEntry % cycleLength);
           planned += plannedOccurrences * repeatRow.stitchesPerRow;
@@ -551,12 +568,14 @@ export class ProjectDetailComponent implements OnChanges {
 
   protected sectionYarns(section: Project['sections'][number]): Project['yarns'] {
     const yarnIds = new Set<string>();
+    const sectionYarnId = materialId(this.project.yarns, section.yarnId);
+    if (sectionYarnId) yarnIds.add(sectionYarnId);
     for (const entry of section.entries) {
       if (entry.type === 'range') {
-        yarnIds.add(entry.yarnId ?? this.project.yarns[0]?.id ?? '');
+        yarnIds.add(materialId(this.project.yarns, entry.yarnId, section.yarnId) ?? '');
       } else {
         for (const row of entry.repeatRows) {
-          yarnIds.add(row.yarnId ?? entry.yarnId ?? this.project.yarns[0]?.id ?? '');
+          yarnIds.add(materialId(this.project.yarns, row.yarnId, entry.yarnId, section.yarnId) ?? '');
         }
       }
     }

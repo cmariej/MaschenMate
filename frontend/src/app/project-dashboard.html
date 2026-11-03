@@ -155,13 +155,13 @@
       <div class="current-progress-card">
         <span class="eyebrow">Weiter geht's</span>
         <h2 class="current-project-name">{{ project.name }}</h2>
-        @if (project.instructionMode === 'pdf' && project.pdfSections.length === 0) {
+        @if (project.sections.length === 0) {
           <div class="pdf-progress-dashboard">
-            <div class="current-progress-metrics"><span>PDF-Fortschritt <strong>{{ progressPercent(project) }}%</strong></span></div>
+            <div class="current-progress-metrics"><span>Fortschritt <strong>{{ progressPercent(project) }}%</strong></span></div>
             <div class="pdf-progress-stepper">
-              <button type="button" aria-label="PDF-Fortschritt um 10 Prozent verringern" [disabled]="busyProjectId === project.id || progressPercent(project) === 0" (click)="changePdfProgress(project, -10)">−10%</button>
+              <button type="button" aria-label="Fortschritt um 10 Prozent verringern" [disabled]="busyProjectId === project.id || progressPercent(project) === 0" (click)="changePdfProgress(project, -10)">−10%</button>
               <strong>{{ progressPercent(project) }}%</strong>
-              <button type="button" aria-label="PDF-Fortschritt um 10 Prozent erhöhen" [disabled]="busyProjectId === project.id || progressPercent(project) === 100" (click)="changePdfProgress(project, 10)">+10%</button>
+              <button type="button" aria-label="Fortschritt um 10 Prozent erhöhen" [disabled]="busyProjectId === project.id || progressPercent(project) === 100" (click)="changePdfProgress(project, 10)">+10%</button>
             </div>
             <p class="pdf-progress-hint">Bei 100 % wird das Projekt als fertiggestellt markiert.</p>
             <div class="progress-track"><span [style.width.%]="progressPercent(project)"></span></div>
@@ -199,7 +199,7 @@
           }
           <p class="row-caption">
             @if (followingProjectRow; as row) {
-              {{ project.instructionMode === 'pdf' ? 'Reihe ' + row.number : 'Reihe ' + row.number + ': ' + row.instructions }}
+              Reihe {{ row.number }}@if (row.instructions) { : {{ row.instructions }} }
             } @else if (currentProjectNextRow) { Keine weitere Reihe in diesem Abschnitt } @else { Abschnitt abgeschlossen }
           </p>
           <div class="current-progress-metrics">
@@ -225,10 +225,6 @@
   @if (page === 'projects') {
   <section class="project-list">
     <div class="section-heading">
-      <div>
-        <span class="eyebrow">Deine Sammlung</span>
-        <h2>Alle Projekte</h2>
-      </div>
       @if (page === 'projects') {
         <span class="project-count">{{ filteredProjects.length }} {{ filteredProjects.length === 1 ? 'Projekt' : 'Projekte' }}</span>
       }

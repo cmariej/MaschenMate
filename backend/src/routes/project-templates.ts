@@ -23,6 +23,21 @@ async function accessibleTemplate(userId: string, id: string): Promise<ProjectTe
 }
 
 function detachTemplateMaterials(template: ProjectTemplate): ProjectTemplate {
+  const sections = template.sections ?? [];
+  const legacySections = template.instructionMode === 'pdf' ? template.pdfSections ?? [] : [];
+  template = {
+    ...template,
+    instructionMode: 'manual',
+    instructionPdf: template.instructionPdf ?? null,
+    instructionPdfName: template.instructionPdf ? template.instructionPdfName ?? 'Anleitung.pdf' : null,
+    sections: [
+      ...sections,
+      ...legacySections
+        .filter(pdf => !sections.some(section => section.id === pdf.id))
+        .map(section => ({ ...section, entries: [] })),
+    ],
+    pdfSections: [],
+  };
   if (template.materialRefsLocal) return template;
   const localId = (kind: 'yarn' | 'needle', sourceId: string) =>
     `template-${createHash('sha256').update(JSON.stringify([template.id, kind, sourceId])).digest('hex').slice(0, 32)}`;
@@ -36,10 +51,10 @@ function detachTemplateMaterials(template: ProjectTemplate): ProjectTemplate {
     yarns: template.yarns.map((yarn) => ({ ...yarn, id: yarnIds.get(yarn.id)! })),
     needles: template.needles.map((needle) => ({ ...needle, id: needleIds.get(needle.id)! })),
     sections: template.sections.map((section) => ({
-      ...section, needleId: needleId(section.needleId),
+      ...section, yarnId: yarnId(section.yarnId), needleId: needleId(section.needleId),
       entries: section.entries.map((entry) => entry.type === 'range'
-        ? { ...entry, yarnId: yarnId(entry.yarnId) }
-        : { ...entry, yarnId: yarnId(entry.yarnId), repeatRows: entry.repeatRows.map((row) => ({ ...row, yarnId: yarnId(row.yarnId) })) }),
+        ? { ...entry, needleId: needleId(entry.needleId), yarnId: yarnId(entry.yarnId) }
+        : { ...entry, needleId: needleId(entry.needleId), yarnId: yarnId(entry.yarnId), repeatRows: entry.repeatRows.map((row) => ({ ...row, needleId: needleId(row.needleId), yarnId: yarnId(row.yarnId) })) }),
     })),
   };
 }
@@ -64,17 +79,17 @@ router.post('/', async (req, res, next) => {
     const userId = res.locals.authUser.id as string;
     const project = await projectStore.find(userId, parsed.data.projectId);
     if (!project) { res.status(404).json({ message: 'Projekt nicht gefunden.' }); return; }
-    if (project.instructionMode === 'pdf' && !project.instructionPdf) {
+    if (project.instructionPdfName && !project.instructionPdf) {
       res.status(400).json({ message: 'Die PDF-Datei fehlt. Bitte lade sie im Projekt erneut hoch, bevor du die Vorlage speicherst.' }); return;
     }
     const template = await templateStore.create(detachTemplateMaterials({
       id: randomUUID(), userId, sharingRestricted: !!project.sharedSource, name: parsed.data.name, projectName: project.name, size: project.size ?? '', designer: project.designer ?? '', websiteUrl: project.websiteUrl ?? '', type: project.type, category: project.category,
       image: project.image, gauge: structuredClone(project.gauge), patternYarn: structuredClone(project.patternYarn),
       yarns: structuredClone(project.yarns), needles: structuredClone(project.needles),
-      instructionMode: project.instructionMode, instructionPdf: project.instructionMode === 'pdf' ? project.instructionPdf : null,
-      instructionPdfName: project.instructionMode === 'pdf' ? (project.instructionPdfName ?? 'Anleitung.pdf') : null,
-      pdfSections: project.instructionMode === 'pdf' ? structuredClone(project.pdfSections) : [],
-      sections: project.instructionMode === 'manual' ? structuredClone(project.sections) : [], createdAt: new Date().toISOString(),
+      instructionMode: project.instructionMode, instructionPdf: project.instructionPdf,
+      instructionPdfName: project.instructionPdfName,
+      pdfSections: structuredClone(project.pdfSections),
+      sections: structuredClone(project.sections), createdAt: new Date().toISOString(),
     }));
     const { id, name, size, designer, type, category, instructionMode, createdAt } = template;
     res.status(201).json({ template: { id, name, size, designer, type, category, instructionMode, createdAt, shared: false, isOwner: true, creatorUsername: res.locals.authUser.username, hasImage: Boolean(template.image) } });
@@ -122,7 +137,6 @@ router.post('/:templateId/projects', async (req, res, next) => {
     const stored = await accessibleTemplate(userId, req.params.templateId);
     if (!stored) { res.status(404).json({ message: 'Vorlage nicht gefunden.' }); return; }
     const template = detachTemplateMaterials(stored);
-    if (template.instructionMode === 'pdf' && !template.instructionPdf) { res.status(400).json({ message: 'Die PDF-Datei der Vorlage fehlt.' }); return; }
     const projectYarnIds = new Map(template.yarns.map((yarn) => [yarn.id, randomUUID()]));
     const projectNeedleIds = new Map(template.needles.map((needle) => [needle.id, randomUUID()]));
     const projectYarnId = (id?: string) => id ? projectYarnIds.get(id) : undefined;
@@ -135,10 +149,10 @@ router.post('/:templateId/projects', async (req, res, next) => {
       instructionMode: template.instructionMode,
       instructionPdf: template.instructionPdf, instructionPdfName: template.instructionPdfName,
       sections: template.sections.map((section) => ({
-        ...section, id: randomUUID(), needleId: projectNeedleId(section.needleId),
+        ...section, id: randomUUID(), yarnId: projectYarnId(section.yarnId), needleId: projectNeedleId(section.needleId),
         entries: section.entries.map((entry) => entry.type === 'range'
-          ? { ...entry, id: randomUUID(), yarnId: projectYarnId(entry.yarnId) }
-          : { ...entry, id: randomUUID(), yarnId: projectYarnId(entry.yarnId), repeatRows: entry.repeatRows.map((row) => ({ ...row, yarnId: projectYarnId(row.yarnId) })) }),
+          ? { ...entry, id: randomUUID(), needleId: projectNeedleId(entry.needleId), yarnId: projectYarnId(entry.yarnId) }
+          : { ...entry, id: randomUUID(), needleId: projectNeedleId(entry.needleId), yarnId: projectYarnId(entry.yarnId), repeatRows: entry.repeatRows.map((row) => ({ ...row, needleId: projectNeedleId(row.needleId), yarnId: projectYarnId(row.yarnId) })) }),
       })),
       pdfSections: template.pdfSections.map((section) => ({ ...section, id: randomUUID() })),
       progress: { startedAt: null, activeSectionId: null, pdfProgress: 0, completedRows: {}, changelog: [] },

@@ -1,3 +1,5 @@
+import { materialId } from './material-selection';
+import { repeatRowLabel } from './repeat-row-label';
 import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -15,6 +17,7 @@ import { PdfViewerComponent } from './pdf-viewer.component';
   styleUrl: './template-detail.component.css',
 })
 export class TemplateDetailComponent implements OnInit {
+  protected readonly repeatRowLabel = repeatRowLabel;
   protected readonly faArrowLeft = faArrowLeft;
   protected readonly faShareNodes = faShareNodes;
   protected readonly faUser = faUser;
@@ -49,7 +52,7 @@ export class TemplateDetailComponent implements OnInit {
     this.projectService.getTemplate(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ template }) => {
         this.template = template;
-        if (template.instructionMode === 'pdf' && template.instructionPdfName) {
+        if (template.instructionPdfName) {
           this.pdfLoading = true;
           this.projectService.downloadTemplatePdf(template.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: (pdf) => {
@@ -115,8 +118,8 @@ export class TemplateDetailComponent implements OnInit {
   }
 
   protected needleName(id?: string): string {
-    const needle = this.template?.needles.find((item) => item.id === id);
-    if (!needle) return 'Keine Nadel ausgewählt';
+    const needle = this.template?.needles.find((item) => item.id === materialId(this.template?.needles ?? [], id));
+    if (!needle) return 'Unbekannt';
     const kinds: Record<string, string> = { straight: 'Gerade Stricknadeln', circular: 'Rundstricknadel', 'double-pointed': 'Nadelspiel', 'crochet-hook': 'Häkelnadel', other: 'Sonstige Nadel' };
     return `${kinds[needle.type] ?? 'Nadel'} · ${needle.size} mm`;
   }
@@ -130,6 +133,6 @@ export class TemplateDetailComponent implements OnInit {
   }
 
   protected yarnName(id?: string): string {
-    return this.template?.yarns.find((item) => item.id === id)?.name ?? 'Kein Garn ausgewählt';
+    return this.template?.yarns.find((item) => item.id === materialId(this.template?.yarns ?? [], id))?.name ?? 'Unbekannt';
   }
 }

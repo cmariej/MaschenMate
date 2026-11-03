@@ -1,3 +1,5 @@
+import { InstructionMaterialComponent } from './instruction-material.component';
+import { repeatRowLabel } from './repeat-row-label';
 import { Component, ElementRef, EventEmitter, HostListener, Injector, Input, Output, afterNextRender, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { faArrowLeft, faCalculator, faCopy, faGripVertical, faPlus, faTrashCan, faXmark } from '@fortawesome/free-solid-svg-icons';
@@ -15,7 +17,7 @@ import {
 } from './project.service';
 
 @Component({
-  imports: [FormsModule, FontAwesomeIconComponent],
+  imports: [FormsModule, FontAwesomeIconComponent, InstructionMaterialComponent],
   selector: 'app-project-editor',
   styleUrl: './project-dashboard.css',
   template: `
@@ -144,18 +146,7 @@ import {
         @if (instructionOnly) {
         <section class="form-section">
           <h3>Anleitung</h3>
-          <div class="instruction-mode-choice" role="radiogroup" aria-label="Anleitungsformat">
-            <label class="instruction-mode-option" [class.selected]="draft.instructionMode === 'manual'">
-              <input type="radio" name="instructionMode" value="manual" [(ngModel)]="draft.instructionMode" [disabled]="processingPdf" />
-              <span><strong>Manuell eingeben</strong><small>Reihen und Abschnitte selbst erfassen</small></span>
-            </label>
-            <label class="instruction-mode-option" [class.selected]="draft.instructionMode === 'pdf'">
-              <input type="radio" name="instructionMode" value="pdf" [(ngModel)]="draft.instructionMode" [disabled]="processingPdf" />
-              <span><strong>PDF hochladen</strong><small>Vorhandene Anleitung als Datei nutzen</small></span>
-            </label>
-          </div>
-          @if (draft.instructionMode === 'manual') {
-          <p class="form-hint">Jeder Eintrag steht für eine Reihe oder einen zusammenhängenden Reihenabschnitt mit gleicher Maschenzahl und Anweisung. Teile den Abschnitt auf, wenn sich Maschenzahl, Text oder Garn ändert. Eine Wiederholung bildet einen wechselnden Reihenzyklus wie rechts/links ab.</p>
+          <p class="form-hint">Lege deine Abschnitte an und ergänze bei Bedarf eine Anweisung, Notiz oder detaillierte Reihenanweisungen. Alle Inhalte sind optional. Mit einer Reihenanzahl kannst du den Fortschritt auch ohne Reihenanweisungen verfolgen.</p>
           @for (section of draft.sections; track section.id; let sectionIndex = $index) {
             <details class="section-editor" [open]="openManualSectionId === section.id" (toggle)="onManualSectionToggle($event, section.id)" [attr.data-section-id]="section.id" [attr.data-sortable-kind]="'manual'" [attr.data-sortable-index]="sectionIndex" [class.section-insert-before]="isSectionInsert(sectionIndex, 'manual', 'before')" [class.section-insert-after]="isSectionInsert(sectionIndex, 'manual', 'after')">
               <summary class="disclosure-summary section-editor-summary">
@@ -173,14 +164,18 @@ import {
                     <button class="editor-action-button remove" type="button" (click)="removeSection.emit(sectionIndex)"><app-fa-icon [icon]="faTrashCan" /> Entfernen</button>
                   </div>
                 </div>
-                <label class="field">Nadel für diesen Abschnitt
-                  <select [name]="'section-needle-' + sectionIndex" [(ngModel)]="section.needleId">
-                    <option [ngValue]="undefined">Keine Nadel ausgewählt</option>
-                    @for (needle of draft.needles; track needle.id) { <option [ngValue]="needle.id">{{ needleName(needle) }}</option> }
-                  </select>
+                <app-instruction-material [target]="section" [yarns]="draft.yarns" [needles]="draft.needles" />
+                <label class="field">Notiz (optional)
+                  <textarea [name]="'section-notes-' + sectionIndex" [(ngModel)]="section.notes" maxlength="5000"></textarea>
                 </label>
+                @if (!section.entries.length) {
+                  <label class="field">Reihenanzahl (optional)
+                    <input [name]="'section-rows-' + sectionIndex" type="number" min="1" max="10000" [(ngModel)]="section.rowCount" />
+                  </label>
+                }
               @for (entry of section.entries; track entry.id; let entryIndex = $index) {
                 <div class="instruction-editor" [attr.data-entry-id]="entry.id">
+                  <app-instruction-material [target]="entry" [inherit]="true" [yarns]="draft.yarns" [needles]="draft.needles" [inheritedYarnId]="section.yarnId" [inheritedNeedleId]="section.needleId" />
                   @if (entry.type === 'range') {
                     <strong>{{ entry.fromRow === entry.toRow ? 'Einzelreihe' : 'Anweisung · Reihenabschnitt' }}</strong>
                     <div class="row-number-grid">
@@ -197,12 +192,6 @@ import {
                     <label class="field">Maschen
                       <input [name]="'range-count-' + sectionIndex + '-' + entryIndex" type="number" min="1" [(ngModel)]="entry.stitchesPerRow" required />
                     </label>
-                    <label class="field">Garn für diesen Eintrag
-                      <select [name]="'range-yarn-' + sectionIndex + '-' + entryIndex" [(ngModel)]="entry.yarnId">
-                        @if (!entry.yarnId) { <option [ngValue]="undefined">Garn auswählen</option> }
-                        @for (yarn of draft.yarns; track yarn.id) { <option [ngValue]="yarn.id">{{ yarn.name }}</option> }
-                      </select>
-                    </label>
                   } @else {
                     <strong>Musterwiederholung</strong>
                     <div class="row-number-grid">
@@ -215,18 +204,13 @@ import {
                     </div>
                     @for (repeatRow of entry.repeatRows; track $index; let repeatIndex = $index) {
                       <div class="repeat-row">
-                        <label class="field">Musterreihe {{ repeatIndex + 1 }} · Text
+                        <label class="field">{{ repeatRowLabel(repeatIndex) }} · Text
                           <input [name]="'repeat-instruction-' + sectionIndex + '-' + entryIndex + '-' + repeatIndex" [(ngModel)]="repeatRow.instructions" required maxlength="500" placeholder="z. B. linke Maschen" />
                         </label>
                         <label>Maschen
                           <input [name]="'repeat-count-' + sectionIndex + '-' + entryIndex + '-' + repeatIndex" type="number" min="1" [(ngModel)]="repeatRow.stitchesPerRow" required />
                         </label>
-                        <label class="field">Garn
-                          <select [name]="'repeat-yarn-' + sectionIndex + '-' + entryIndex + '-' + repeatIndex" [(ngModel)]="repeatRow.yarnId">
-                            @if (!repeatRow.yarnId) { <option [ngValue]="undefined">Garn auswählen</option> }
-                            @for (yarn of draft.yarns; track yarn.id) { <option [ngValue]="yarn.id">{{ yarn.name }}</option> }
-                          </select>
-                        </label>
+                        <app-instruction-material [target]="repeatRow" [inherit]="true" [yarns]="draft.yarns" [needles]="draft.needles" [inheritedYarnId]="entry.yarnId ?? section.yarnId" [inheritedNeedleId]="entry.needleId ?? section.needleId" />
                         @if (entry.repeatRows.length > 1) {
                           <button class="remove-button" type="button" (click)="entry.repeatRows.splice(repeatIndex, 1)">Entfernen</button>
                         }
@@ -250,7 +234,6 @@ import {
             <p class="form-hint">Füge Abschnitte hinzu, zum Beispiel „Bündchen“, „Vorderteil“ oder „Ärmel“.</p>
           }
           <button class="secondary-button inline-icon-action add-section-button" type="button" (click)="addSection.emit()"><app-fa-icon [icon]="faPlus" /> Neuer Abschnitt</button>
-          } @else {
             <div class="instruction-pdf-upload">
               @if (draft.instructionPdfName) {
                 <p class="form-hint">Ausgewählte PDF: <strong>{{ draft.instructionPdfName }}</strong></p>
@@ -264,34 +247,10 @@ import {
                 <button class="text-button" type="button" [disabled]="processingPdf" (click)="removeInstructionPdf()">PDF entfernen</button>
               }
               @if (!draft.instructionPdf && !draft.instructionPdfName) {
-                <p class="form-hint">Lade eine PDF-Datei hoch, um die manuelle Eingabe zu ersetzen.</p>
+                <p class="form-hint">Optional kannst du eine PDF ergänzen und manuelle Anweisungen eintragen.</p>
               }
             </div>
-            <div class="pdf-sections-editor">
-              <div>
-                <h4>Abschnitte für den Fortschritt (optional)</h4>
-                <p class="form-hint">Lege nur Namen und Reihenanzahl fest. Der Projektfortschritt wird dann anhand der erledigten Reihen berechnet.</p>
-              </div>
-              @for (section of draft.pdfSections; track section.id; let sectionIndex = $index) {
-                <div class="pdf-section-row" [attr.data-section-id]="section.id" [attr.data-sortable-kind]="'pdf'" [attr.data-sortable-index]="sectionIndex" [class.section-insert-before]="isSectionInsert(sectionIndex, 'pdf', 'before')" [class.section-insert-after]="isSectionInsert(sectionIndex, 'pdf', 'after')">
-                  <span class="section-drag-handle" role="button" tabindex="0" aria-label="PDF-Abschnitt verschieben. Mit Pfeiltasten sortieren." title="Zum Verschieben ziehen" (click)="$event.stopPropagation()" (pointerdown)="startSectionDrag($event, sectionIndex, 'pdf')" (keydown)="moveSectionWithKeyboard($event, sectionIndex, 'pdf')"><app-fa-icon [icon]="faGripVertical" /></span>
-                  <label class="field">Abschnittsname
-                    <input [name]="'pdf-section-name-' + sectionIndex" [(ngModel)]="section.name" required maxlength="100" placeholder="z. B. Rückenteil" />
-                  </label>
-                  <label class="field">Reihen
-                    <input [name]="'pdf-section-rows-' + sectionIndex" type="number" min="1" max="10000" step="1" [(ngModel)]="section.rowCount" required />
-                  </label>
-                  <div class="editor-item-actions">
-                    <button class="subtle-button" type="button" (click)="duplicatePdfSectionAndScroll(sectionIndex)">Abschnitt duplizieren</button>
-                    <button class="remove-button" type="button" (click)="removePdfSection(sectionIndex)">Entfernen</button>
-                  </div>
-                </div>
-              } @empty {
-                <p class="form-hint">Ohne Abschnitte kannst du den Fortschritt manuell in 10-%-Schritten setzen.</p>
-              }
-              <button class="secondary-button inline-icon-action add-section-button" type="button" (click)="addPdfSection()"><app-fa-icon [icon]="faPlus" /> PDF-Abschnitt hinzufügen</button>
-            </div>
-          }
+
         </section>
         } @else if (!editing) {
           <p class="form-hint editor-workflow-hint">{{ draft.sections.length || draft.instructionPdfName ? 'Die Anleitung aus der Vorlage wird übernommen und kann nach dem Anlegen bearbeitet werden.' : 'Die Anleitung kannst du nach dem Anlegen des Projekts in den Projektdetails hinzufügen.' }}</p>
@@ -302,7 +261,7 @@ import {
         }
         <footer class="editor-actions">
           <button class="secondary-button" type="button" [disabled]="saving" (click)="back.emit()">Abbrechen</button>
-          <button class="primary-button" type="submit" [disabled]="saving || processingImage || processingPdf || (draft.instructionMode === 'pdf' && !!pdfError) || projectForm.invalid">
+          <button class="primary-button" type="submit" [disabled]="saving || processingImage || processingPdf || !!pdfError || projectForm.invalid">
             {{ saving ? 'Wird gespeichert …' : instructionOnly ? 'Anleitung speichern' : editing ? 'Änderungen speichern' : 'Projekt anlegen' }}
           </button>
         </footer>
@@ -336,6 +295,7 @@ import {
   `,
 })
 export class ProjectEditorComponent {
+  protected readonly repeatRowLabel = repeatRowLabel;
   private readonly hostElement: ElementRef<HTMLElement> = inject(ElementRef);
   private readonly injector = inject(Injector);
   protected readonly faArrowLeft = faArrowLeft;

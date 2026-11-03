@@ -179,6 +179,7 @@
 }
 
 .project-count {
+  margin-left: auto;
   color: #958790;
   font-size: 11px;
 }
@@ -930,6 +931,7 @@
 
 .add-section-button {
   margin-top: 12px;
+  margin-bottom: 12px;
 }
 
 .form-section > .form-hint {

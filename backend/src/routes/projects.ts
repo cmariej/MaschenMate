@@ -16,6 +16,7 @@ const instructionRowSchema = z.object({
   instructions: z.string().trim().min(1).max(500),
   stitchesPerRow: z.number().int().positive().max(100_000),
   yarnId: idSchema.optional(),
+  needleId: idSchema.optional(),
 });
 const instructionEntrySchema = z.discriminatedUnion('type', [
   z.object({
@@ -26,6 +27,7 @@ const instructionEntrySchema = z.discriminatedUnion('type', [
     instructions: z.string().trim().min(1).max(500),
     stitchesPerRow: z.number().int().positive().max(100_000),
     yarnId: idSchema.optional(),
+    needleId: idSchema.optional(),
   }),
   z.object({
     id: idSchema,
@@ -34,6 +36,7 @@ const instructionEntrySchema = z.discriminatedUnion('type', [
     toRow: z.number().int().positive().max(100_000),
     repeatRows: z.array(instructionRowSchema).min(1).max(100),
     yarnId: idSchema.optional(),
+    needleId: idSchema.optional(),
   }),
 ]);
 const projectYarnSchema = z.object({
@@ -125,7 +128,10 @@ export const projectInputSchema = z.object({
     id: idSchema,
     name: z.string().trim().min(1).max(100),
     entries: z.array(instructionEntrySchema).max(300),
+    notes: z.string().trim().max(5000).optional(),
+    rowCount: z.number().int().positive().max(10000).nullish(),
     needleId: idSchema.nullable().optional(),
+    yarnId: idSchema.optional(),
   })).max(50),
   progress: z.object({
     startedAt: z.string().datetime().nullable(),
@@ -159,6 +165,7 @@ export const projectInputSchema = z.object({
     if (section.needleId && !needleIds.has(section.needleId)) {
       context.addIssue({ code: 'custom', path: ['sections', sectionIndex, 'needleId'], message: 'Die Abschnittsnadel muss aus den ausgewählten Nadeln stammen.' });
     }
+    if (section.yarnId && !yarnIds.has(section.yarnId)) context.addIssue({ code: 'custom', path: ['sections', sectionIndex, 'yarnId'], message: 'Unbekanntes Abschnittsgarn.' });
     section.entries.sort((left, right) => left.fromRow - right.fromRow);
     let expectedRow = 1;
     for (const [entryIndex, entry] of section.entries.entries()) {
@@ -169,11 +176,13 @@ export const projectInputSchema = z.object({
           message: 'Die Endreihe muss gleich oder größer als die Startreihe sein.',
         });
       }
+      if (entry.needleId && !needleIds.has(entry.needleId)) context.addIssue({ code: 'custom', path: ['sections', sectionIndex, 'entries', entryIndex, 'needleId'], message: 'Unbekannte Anweisungsnadel.' });
       if (entry.yarnId && !yarnIds.has(entry.yarnId)) {
         context.addIssue({ code: 'custom', path: ['sections', sectionIndex, 'entries', entryIndex, 'yarnId'], message: 'Das Reihengarn muss aus den ausgewählten Garnen stammen.' });
       }
       if (entry.type === 'repeat') {
         for (const [rowIndex, row] of entry.repeatRows.entries()) {
+          if (row.needleId && !needleIds.has(row.needleId)) context.addIssue({ code: 'custom', path: ['sections', sectionIndex, 'entries', entryIndex, 'repeatRows', rowIndex, 'needleId'], message: 'Unbekannte Reihennadel.' });
           if (row.yarnId && !yarnIds.has(row.yarnId)) {
             context.addIssue({ code: 'custom', path: ['sections', sectionIndex, 'entries', entryIndex, 'repeatRows', rowIndex, 'yarnId'], message: 'Das Reihengarn muss aus den ausgewählten Garnen stammen.' });
           }
@@ -216,22 +225,15 @@ const router = Router();
 router.use(requireAuth);
 
 function isSectionComplete(project: ProjectInput, sectionId: string): boolean {
-  if (project.instructionMode === 'pdf') {
-    const section = project.pdfSections.find((item) => item.id === sectionId);
-    return Boolean(section && (project.progress.completedRows[sectionId] ?? 0) >= section.rowCount);
-  }
   const section = project.sections.find((item) => item.id === sectionId);
-  if (!section || section.entries.length === 0) return false;
-  const lastRow = section.entries.reduce((last, entry) => Math.max(last, entry.toRow), 0);
+  if (!section) return false;
+  const lastRow = section.entries.reduce((last, entry) => Math.max(last, entry.toRow), section.entries.length ? 0 : section.rowCount ?? 0);
+  if (!lastRow) return false;
   return (project.progress.completedRows[sectionId] ?? 0) >= lastRow;
 }
 
 function isProjectComplete(project: ProjectInput): boolean {
-  if (project.instructionMode === 'pdf') {
-    return project.pdfSections.length
-      ? project.pdfSections.every((section) => (project.progress.completedRows[section.id] ?? 0) >= section.rowCount)
-      : (project.progress.pdfProgress ?? 0) >= 100;
-  }
+  if (!project.sections.length) return (project.progress.pdfProgress ?? 0) >= 100;
   return project.sections.length > 0 && project.sections.every((section) => isSectionComplete(project, section.id));
 }
 
@@ -305,10 +307,6 @@ router.put('/:projectId/instruction-pdf', express.raw({ type: 'application/pdf',
       res.status(404).json({ message: 'Projekt nicht gefunden.' });
       return;
     }
-    if (project.instructionMode !== 'pdf') {
-      res.status(409).json({ message: 'Dieses Projekt verwendet keine PDF-Anleitung.' });
-      return;
-    }
     if (!Buffer.isBuffer(req.body) || !req.body.subarray(0, 1024).includes(Buffer.from('%PDF-'))) {
       res.status(400).json({ message: 'Die ausgewählte Datei ist keine gültige PDF-Datei.' });
       return;
@@ -344,13 +342,9 @@ router.post('/', async (req, res, next) => {
   try {
     const userId = res.locals.authUser.id as string;
     const input = parsed.data as ProjectInput;
-    if (input.instructionMode === 'pdf' && (!input.instructionPdf || !input.instructionPdfName)) {
-      res.status(400).json({ message: 'Bitte lade eine gültige PDF-Anleitung hoch.' });
+    if (Boolean(input.instructionPdf) !== Boolean(input.instructionPdfName)) {
+      res.status(400).json({ message: 'Bitte wähle eine gültige PDF-Datei mit Dateinamen aus.' });
       return;
-    }
-    if (input.instructionMode === 'manual') {
-      input.instructionPdf = null;
-      input.instructionPdfName = null;
     }
     const project = await projectStore.create(userId, input);
     if (project.progress.startedAt) {
@@ -405,19 +399,11 @@ router.put('/:projectId', async (req, res, next) => {
     }
 
     const input = parsed.data as ProjectInput;
-    if (input.instructionMode === 'pdf') {
-      if (typeof req.body?.instructionPdf !== 'string') {
-        input.instructionPdfName = previous.instructionPdfName ?? input.instructionPdfName;
-      }
-      input.instructionPdf ??= previous.instructionPdf;
-      input.instructionPdfName ??= previous.instructionPdfName;
-      if (!input.instructionPdf || !input.instructionPdfName) {
-        res.status(400).json({ message: 'Bitte lade eine gültige PDF-Anleitung hoch.' });
-        return;
-      }
-    } else {
-      input.instructionPdf = null;
-      input.instructionPdfName = null;
+    if (input.instructionPdfName && !input.instructionPdf) input.instructionPdf = previous.instructionPdf;
+    if (!input.instructionPdfName) input.instructionPdf = null;
+    if (input.instructionPdfName && !input.instructionPdf) {
+      res.status(400).json({ message: 'Bitte wähle eine gültige PDF-Datei aus.' });
+      return;
     }
     input.progress.cancelledAt = previous.progress.cancelledAt ?? null;
     const project = await projectStore.update(userId, req.params.projectId, input);
@@ -428,9 +414,7 @@ router.put('/:projectId', async (req, res, next) => {
     if (!previous.progress.startedAt && project.progress.startedAt) {
       await recordActivity(userId, project, 'started', `${project.id}:started`);
     }
-    const progressSections = project.instructionMode === 'pdf'
-      ? project.pdfSections
-      : project.sections;
+    const progressSections = project.sections;
     for (const section of progressSections) {
       if (!isSectionComplete(previous, section.id) && isSectionComplete(project, section.id)) {
         await recordActivity(
@@ -489,9 +473,8 @@ router.post('/:projectId/restart', async (req, res, next) => {
     const project = await projectStore.find(userId, req.params.projectId);
     if (!project) { res.status(404).json({ message: 'Projekt nicht gefunden.' }); return; }
     if (!project.progress.cancelledAt) { res.status(409).json({ message: 'Nur abgebrochene Projekte können neu gestartet werden.' }); return; }
-    if (project.instructionMode !== 'pdf' && !project.sections.length) { res.status(400).json({ message: 'Füge zuerst mindestens einen Anleitungsabschnitt hinzu.' }); return; }
     const timestamp = new Date().toISOString();
-    const firstSectionId = project.instructionMode === 'pdf' ? project.pdfSections[0]?.id ?? null : project.sections[0]?.id ?? null;
+    const firstSectionId = project.sections[0]?.id ?? null;
     const updated = await projectStore.update(userId, project.id, {
       ...project,
       progress: {

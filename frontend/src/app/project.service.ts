@@ -52,6 +52,7 @@ export interface InstructionRow {
   instructions: string;
   stitchesPerRow: number;
   yarnId?: string;
+  needleId?: string;
 }
 
 export interface InstructionRange extends InstructionRow {
@@ -68,6 +69,7 @@ export interface InstructionRepeat {
   toRow: number;
   repeatRows: InstructionRow[];
   yarnId?: string;
+  needleId?: string;
 }
 
 export type InstructionEntry = InstructionRange | InstructionRepeat;
@@ -75,7 +77,10 @@ export type InstructionEntry = InstructionRange | InstructionRepeat;
 export interface ProjectSection {
   id: string;
   name: string;
+  yarnId?: string;
   entries: InstructionEntry[];
+  notes?: string;
+  rowCount?: number | null;
   needleId?: string;
 }
 

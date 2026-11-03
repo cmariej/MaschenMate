@@ -39,35 +39,45 @@
 
     <section class="template-detail-card">
       <h2>Anleitung</h2>
-      @if (item.instructionMode === 'pdf') {
+      @if (item.instructionPdfName) {
         @if (pdfUrl && pdfData; as pdf) {
           <p><a class="template-pdf-link" [href]="pdfUrl" target="_blank" rel="noopener">PDF-Anleitung in neuem Tab öffnen</a></p>
           <app-pdf-viewer [pdf]="pdf" />
         } @else if (pdfLoading) { <p role="status">PDF-Anleitung wird geladen …</p> }
         @else if (pdfError) { <p class="template-detail-error" role="alert">{{ pdfError }}</p> }
         @else { <p>Keine PDF-Anleitung hinterlegt.</p> }
-        @for (section of item.pdfSections; track section.id) { <div class="template-pdf-section"><strong>{{ section.name }}</strong><span>{{ section.rowCount }} Reihen</span></div> }
-      } @else {
+      }
         @for (section of item.sections; track section.id) {
           <details class="template-pattern-section">
             <summary class="disclosure-summary"><strong>{{ section.name }}</strong></summary>
             <div class="template-pattern-body">
-              <p>Nadel: {{ needleName(section.needleId) }}</p>
+              @if (item.yarns.length > 1 || item.needles.length > 1) {
+                  <p>@if (item.yarns.length > 1) { Garn: {{ yarnName(section.yarnId) }} }@if (item.yarns.length > 1 && item.needles.length > 1) { &middot; }@if (item.needles.length > 1) { Nadel: {{ needleName(section.needleId) }} }</p>
+                  }
+              @if (section.notes) { <p class="section-notes">{{ section.notes }}</p> }
+              @if (!section.entries.length && section.rowCount) { <p>{{ section.rowCount }} Reihen</p> }
               @for (entry of section.entries; track entry.id) {
                 <article class="template-instruction">
                   <strong>{{ entry.fromRow === entry.toRow ? 'Reihe ' + entry.fromRow : 'Reihen ' + entry.fromRow + '–' + entry.toRow }}</strong>
+                  @if (item.yarns.length > 1 || item.needles.length > 1) {
+                  <small>@if (item.yarns.length > 1) { Garn: {{ yarnName(entry.yarnId ?? section.yarnId) }} }@if (item.yarns.length > 1 && item.needles.length > 1) { &middot; }@if (item.needles.length > 1) { Nadel: {{ needleName(entry.needleId ?? section.needleId) }} }</small>
+                  }
                   @if (entry.type === 'range') {
-                    <span>{{ entry.instructions }} · {{ entry.stitchesPerRow }} Maschen</span><small>Garn: {{ yarnName(entry.yarnId) }}</small>
+                    <span>{{ entry.instructions }} · {{ entry.stitchesPerRow }} Maschen</span>
                   } @else {
                     <span>Musterwiederholung</span>
-                    @for (row of entry.repeatRows; track $index) { <span>Musterreihe {{ $index + 1 }}: {{ row.instructions }} · {{ row.stitchesPerRow }} Maschen · {{ yarnName(row.yarnId || entry.yarnId) }}</span> }
+                    @for (row of entry.repeatRows; track $index) {
+                      <span>{{ repeatRowLabel($index) }}: {{ row.instructions }} · {{ row.stitchesPerRow }} Maschen</span>
+                      @if (item.yarns.length > 1 || item.needles.length > 1) {
+                  <small>@if (item.yarns.length > 1) { Garn: {{ yarnName(row.yarnId ?? entry.yarnId ?? section.yarnId) }} }@if (item.yarns.length > 1 && item.needles.length > 1) { &middot; }@if (item.needles.length > 1) { Nadel: {{ needleName(row.needleId ?? entry.needleId ?? section.needleId) }} }</small>
+                  }
+                    }
                   }
                 </article>
               }
             </div>
           </details>
-        } @empty { <p>Keine Anleitung hinterlegt.</p> }
-      }
+        } @empty { <p>Noch keine Abschnitte hinterlegt.</p> }
     </section>
 
     <div class="template-detail-footer">
