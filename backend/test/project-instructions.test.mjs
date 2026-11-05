@@ -82,6 +82,20 @@ test('API preserves optional PDF and notes through edits and removes PDF explici
     assert.equal(created.status, 201);
     let { project } = await created.json();
     assert.equal(project.sections[0].notes, 'Meine Notiz');
+    // Progress saves omit attachment fields; omission must never remove the PDF.
+    const progressUpdate = { ...project };
+    delete progressUpdate.instructionPdf;
+    delete progressUpdate.instructionPdfName;
+    delete progressUpdate.image;
+    for (let rows = 1; rows <= 3; rows += 1) {
+      progressUpdate.progress.completedRows.empty = rows;
+      const response = await fetch(`${base}/${project.id}`, { method: 'PUT', headers, body: JSON.stringify(progressUpdate) });
+      assert.equal(response.status, 200);
+      const saved = (await response.json()).project;
+      assert.equal(saved.instructionPdfName, 'Anleitung.pdf');
+      assert.equal(saved.progress.completedRows.empty, rows);
+      assert.equal((await store.find('test', project.id)).instructionPdf, pdf);
+    }
     const edited = await fetch(`${base}/${project.id}`, { method: 'PUT', headers, body: JSON.stringify(project) });
     assert.equal(edited.status, 200);
     assert.equal((await store.find('test', project.id)).instructionPdf, pdf);

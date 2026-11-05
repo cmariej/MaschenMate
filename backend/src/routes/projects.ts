@@ -378,6 +378,10 @@ router.put('/:projectId', async (req, res, next) => {
       websiteUrl: req.body?.websiteUrl ?? previous.websiteUrl ?? '',
       sharedSource: previous.sharedSource ?? false,
       image: req.body?.image !== undefined ? req.body.image : previous.image,
+      // Progress updates omit attachments; only an explicit null removes the PDF.
+      instructionPdfName: req.body?.instructionPdfName !== undefined
+        ? req.body.instructionPdfName
+        : previous.instructionPdfName,
       pdfSections: req.body?.pdfSections ?? previous.pdfSections ?? [],
       progress: {
         ...previous.progress,

@@ -182,25 +182,25 @@
           @if (editingCurrentRow) {
             <form class="row-counter row-counter-edit" novalidate (ngSubmit)="saveCurrentRowNumber(project)">
               <label class="row-number-edit">
-                <span class="row-number-label">Nächste Reihennummer</span>
-                <input #currentRowNumberInput name="current-row-number" type="number" inputmode="numeric" min="1" [max]="sectionRows(section).length + 1" step="1" required [(ngModel)]="currentRowInput" (ngModelChange)="currentRowInputError = ''" [disabled]="busyProjectId === project.id" aria-describedby="row-number-help row-number-error" />
+                <span class="row-number-label">Erledigte Reihen</span>
+                <input #currentRowNumberInput name="current-row-number" type="number" inputmode="numeric" min="0" [max]="sectionRows(section).length" step="1" required [(ngModel)]="currentRowInput" (ngModelChange)="currentRowInputError = ''" [disabled]="busyProjectId === project.id" aria-describedby="row-number-help row-number-error" />
               </label>
               <button class="row-counter-action" type="submit" [disabled]="busyProjectId === project.id">Übernehmen</button>
               <button class="row-counter-action secondary-row-action" type="button" (click)="cancelCurrentRowEdit()">Abbrechen</button>
-              <small id="row-number-help" class="row-number-help">Nächste Reihe: 1 bis {{ sectionRows(section).length + 1 }}</small>
+              <small id="row-number-help" class="row-number-help">Erledigte Reihen: 0 bis {{ sectionRows(section).length }}</small>
               @if (currentRowInputError) { <small id="row-number-error" class="row-number-error" role="alert">{{ currentRowInputError }}</small> }
             </form>
           } @else {
             <div class="row-counter">
               <button class="row-step-button" type="button" aria-label="Eine Reihe zurück" [disabled]="busyProjectId === project.id || completedCurrentRows === 0" (click)="changeCurrentRow(project, -1)"><app-fa-icon [icon]="faMinus" /></button>
-              <button class="row-number-button" type="button" [disabled]="busyProjectId === project.id" aria-label="Reihennummer direkt eingeben" title="Klicken, um eine Reihennummer einzugeben" (click)="editCurrentRowNumber()">{{ currentRowNumber }}</button>
+              <button class="row-number-button" type="button" [disabled]="busyProjectId === project.id" aria-label="Anzahl erledigter Reihen direkt eingeben" title="Erledigte Reihen eingeben" (click)="editCurrentRowNumber()">{{ currentRowNumber }}</button>
               <button class="row-step-button" type="button" aria-label="Eine Reihe weiter" [disabled]="busyProjectId === project.id || !currentProjectNextRow" (click)="changeCurrentRow(project, 1)"><app-fa-icon [icon]="faPlus" /></button>
             </div>
           }
           <p class="row-caption">
-            @if (followingProjectRow; as row) {
-              Reihe {{ row.number }}@if (row.instructions) { : {{ row.instructions }} }
-            } @else if (currentProjectNextRow) { Keine weitere Reihe in diesem Abschnitt } @else { Abschnitt abgeschlossen }
+            @if (currentProjectNextRow; as row) {
+              Reihe {{ row.number }} / {{ sectionRows(section).length }}@if (row.instructions) {: {{ row.instructions }} }
+            } @else { Abschnitt abgeschlossen }
           </p>
           <div class="current-progress-metrics">
             <span>Projekt <strong>{{ progressPercent(project) }}%</strong></span>

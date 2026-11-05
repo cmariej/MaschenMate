@@ -270,7 +270,7 @@ export class ProjectDashboard implements OnInit {
     const project = this.currentProject;
     const section = this.currentSection;
     if (!project || !section) return 0;
-    return this.currentRow(project)?.number ?? this.sectionRows(section).length + 1;
+    return this.sectionCompletedRows(project, section);
   }
 
   protected get completedCurrentRows(): number {
@@ -290,12 +290,6 @@ export class ProjectDashboard implements OnInit {
   protected get currentProjectNextRow(): ExpandedRow | null {
     const project = this.currentProject;
     return project ? this.currentRow(project) : null;
-  }
-
-  protected get followingProjectRow(): ExpandedRow | null {
-    const section = this.currentSection;
-    if (!section || !this.currentProjectNextRow) return null;
-    return this.sectionRows(section).find((row) => row.number === this.currentRowNumber + 1) ?? null;
   }
 
   protected get filteredYarns(): Yarn[] {
@@ -690,13 +684,13 @@ export class ProjectDashboard implements OnInit {
       return;
     }
     const rows = this.sectionRows(section);
-    const maxNextRow = rows.length + 1;
-    if (requestedRow < 1 || requestedRow > maxNextRow) {
-      this.currentRowInputError = `Gib eine Zahl zwischen 1 und ${maxNextRow} ein.`;
+    const maxCompletedRows = rows.length;
+    if (requestedRow < 0 || requestedRow > maxCompletedRows) {
+      this.currentRowInputError = `Gib eine Zahl zwischen 0 und ${maxCompletedRows} ein.`;
       return;
     }
     const completed = project.progress.completedRows[section.id] ?? 0;
-    const nextCompleted = requestedRow - 1;
+    const nextCompleted = requestedRow;
     if (completed !== nextCompleted) {
       const next = structuredClone(project);
       next.progress.completedRows[section.id] = nextCompleted;
